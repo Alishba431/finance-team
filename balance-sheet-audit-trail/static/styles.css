@@ -158,6 +158,11 @@ tr.line-row:hover { background: #f7f9fc; }
   text-decoration: underline;
   margin-top: 0;
 }
+.link-btn:hover {
+  background: none;
+  color: #204a90;
+  text-decoration: none;
+}
 .mono { font-variant-numeric: tabular-nums; }
 
 .add-tb-row select { margin-right: 6px; }
