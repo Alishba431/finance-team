@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SOFP Tracer &mdash; financials to trial balance to general ledger</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>SOFP Tracer</h1>
+    <p>Every balance sheet head, traced to the trial balance accounts and ledger entries behind it.</p>
+  </div>
+  <div class="controls">
+    <label>Period
+      <select id="year-select"></select>
+    </label>
+    <label>Tolerance (PKR)
+      <input id="tolerance" type="number" min="0" step="0.01" value="1" />
+    </label>
+    <button id="export-btn" class="primary" type="button">Export workbook</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="trace" type="button">SOFP breakdown</button>
+  <button class="tab" data-tab="review" type="button">Review &amp; mapping <span class="badge" id="review-badge"></span></button>
+  <button class="tab" data-tab="sources" type="button">Data files</button>
+</nav>
+
+<main>
+  <section id="tab-trace" class="tab-panel active">
+    <div id="summary" class="cards"></div>
+    <div id="trace-message" class="message"></div>
+    <div id="trace-table"></div>
+  </section>
+
+  <section id="tab-review" class="tab-panel">
+    <div id="review-body">
+      <p class="message">Load the financial statements and trial balance first.</p>
+    </div>
+  </section>
+
+  <section id="tab-sources" class="tab-panel">
+    <h2>Data files</h2>
+    <p class="hint">
+      Three workbooks are used, all read-only: the financial statements (the SOFP sheet supplies the
+      heads), the trial balance (opening / movement / closing per account) and the general ledger
+      (the individual entries). Only <code>.xlsx</code> files can be read.
+    </p>
+    <form id="upload-form" class="upload-grid">
+      <div class="upload-box">
+        <h3>Financial statements</h3>
+        <p class="source-state" data-source="financials">Not loaded</p>
+        <input type="file" name="financials" accept=".xlsx" />
+      </div>
+      <div class="upload-box">
+        <h3>Trial balance</h3>
+        <p class="source-state" data-source="trial_balance">Not loaded</p>
+        <input type="file" name="trial_balance" accept=".xlsx" />
+      </div>
+      <div class="upload-box">
+        <h3>General ledger</h3>
+        <p class="source-state" data-source="general_ledger">Not loaded</p>
+        <input type="file" name="general_ledger" accept=".xlsx" />
+      </div>
+      <div class="upload-actions">
+        <button class="primary" type="submit">Upload &amp; re-trace</button>
+        <button id="clear-btn" class="secondary" type="button">Remove loaded files</button>
+        <span id="upload-status" class="status"></span>
+      </div>
+    </form>
+    <div id="source-detail"></div>
+  </section>
+</main>
+
+<div id="drawer" class="drawer" hidden>
+  <div class="drawer-head">
+    <h2 id="drawer-title">Account</h2>
+    <button id="drawer-close" class="secondary" type="button">Close</button>
+  </div>
+  <div id="drawer-body"></div>
+</div>
+<div id="scrim" class="scrim" hidden></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
