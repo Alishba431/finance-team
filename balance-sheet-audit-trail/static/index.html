@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Balance Sheet Audit Trail</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header>
+  <h1>Balance Sheet Audit Trail</h1>
+  <p class="subtitle">Trace every SOFP figure back to its Trial Balance accounts and General Ledger transactions.</p>
+</header>
+
+<main>
+
+  <section id="upload-section" class="card">
+    <h2>1. Upload the workbook</h2>
+    <p class="hint">
+      Upload the Excel workbook containing the Statement of Financial Position (SOFP),
+      Trial Balance (TB) and General Ledger (GL) sheets. Nothing is stored beyond this
+      browser session; the file is only kept in server memory while you work with it.
+    </p>
+    <form id="upload-form">
+      <input type="file" id="file-input" name="file" accept=".xlsx,.xlsm" required />
+      <button type="submit">Upload &amp; detect sheets</button>
+    </form>
+    <div id="upload-error" class="error hidden"></div>
+  </section>
+
+  <section id="config-section" class="card hidden">
+    <h2>2. Confirm the sheets</h2>
+    <p class="hint">These were guessed from the sheet names in your workbook &mdash; change any that are wrong before running the reconciliation.</p>
+    <div class="config-grid">
+      <label>SOFP sheet
+        <select id="sofp-sheet"></select>
+      </label>
+      <label>TB sheet
+        <select id="tb-sheet"></select>
+      </label>
+      <label>GL sheet
+        <select id="gl-sheet"></select>
+      </label>
+      <label>Materiality tolerance
+        <input type="number" id="tolerance" value="1" step="0.01" />
+      </label>
+    </div>
+    <button id="analyze-btn">Run reconciliation</button>
+    <div id="analyze-error" class="error hidden"></div>
+  </section>
+
+  <section id="report-section" class="card hidden">
+    <h2>3. Audit report</h2>
+
+    <div id="meta-note" class="hint"></div>
+
+    <div id="summary-cards" class="summary-cards"></div>
+
+    <div class="export-row">
+      <a id="export-summary" href="#" class="button-link">Download summary (CSV)</a>
+      <a id="export-gl-detail" href="#" class="button-link">Download GL transaction detail (CSV)</a>
+    </div>
+
+    <table id="lines-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>SOFP line</th>
+          <th>Reported value</th>
+          <th>TB total</th>
+          <th>GL total</th>
+          <th>Diff (TB - SOFP)</th>
+          <th>Diff (TB - GL)</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="lines-tbody"></tbody>
+    </table>
+
+    <div id="unmapped-section">
+      <h3>Unmapped TB accounts</h3>
+      <p class="hint">These Trial Balance accounts were not automatically matched to any SOFP line. Assign each one to a line so it is included in the audit trail.</p>
+      <table id="unmapped-table">
+        <thead><tr><th>TB account</th><th>Code</th><th>Closing balance</th><th>Assign to SOFP line</th></tr></thead>
+        <tbody id="unmapped-tbody"></tbody>
+      </table>
+    </div>
+
+    <div id="section-rows-wrap">
+      <h3>Non-numeric / heading rows on the SOFP sheet</h3>
+      <p class="hint">Rows detected as section headings or subtotal captions with no value in the current-year column (shown for context only, not reconciled).</p>
+      <ul id="section-rows-list"></ul>
+    </div>
+  </section>
+
+</main>
+
+<div id="gl-modal" class="modal hidden">
+  <div class="modal-content">
+    <button id="gl-modal-close" class="modal-close">&times;</button>
+    <h3 id="gl-modal-title">GL transactions</h3>
+    <div id="gl-modal-summary" class="hint"></div>
+    <table id="gl-modal-table">
+      <thead><tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance (as stated in GL)</th></tr></thead>
+      <tbody id="gl-modal-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
