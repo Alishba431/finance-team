@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance Team — tools</title>
+<style>
+:root {
+  --bg: #fbfaf8; --surface: #ffffff; --surface-2: #f4f2ee;
+  --border: #e3ded6; --border-strong: #cfc8bd;
+  --text: #1c1a17; --text-dim: #6b655c; --text-faint: #97907f;
+  --accent: #1f6f5c; --accent-soft: #e6f0ec; --accent-text: #1a5c4d;
+  --warn: #8a5a12; --warn-soft: #fbf1de;
+  --danger: #9b2c26; --danger-soft: #fbeceb;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(28,26,23,.04), 0 4px 16px rgba(28,26,23,.05);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181a; --surface: #1e2124; --surface-2: #262a2e;
+    --border: #333940; --border-strong: #454d56;
+    --text: #e9e6e1; --text-dim: #a3a8ae; --text-faint: #757b83;
+    --accent: #4db39a; --accent-soft: #1b2f2a; --accent-text: #6fc9b1;
+    --warn: #d4a24a; --warn-soft: #2d2618;
+    --danger: #e08a83; --danger-soft: #2e1c1b;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 2.5rem 1.5rem 4rem;
+  background: var(--bg); color: var(--text);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+header.top { margin-bottom: .5rem; }
+h1 { font-size: 1.55rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
+.sub { color: var(--text-dim); margin: 0 0 1.5rem; max-width: 62ch; }
+.banner {
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-dim); border-radius: var(--radius);
+  padding: .7rem .9rem; margin-bottom: 1.5rem; font-size: .9rem;
+}
+.banner.live { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+.banner code { font-family: var(--mono); font-size: .85em; }
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 1.1rem 1.2rem 1rem; display: flex; flex-direction: column; gap: .6rem;
+}
+.card.empty { grid-column: 1 / -1; color: var(--text-dim); }
+.card.legacy-card { border-style: dashed; }
+.card.legacy-card .version { color: var(--warn); }
+.card header { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; }
+.card h2 { font-size: 1.05rem; margin: 0; letter-spacing: -.005em; }
+.version { color: var(--text-faint); font-size: .78rem; white-space: nowrap; }
+.summary { margin: 0; color: var(--text-dim); font-size: .92rem; }
+.needs { font-size: .84rem; }
+.needs-label, .gaps span {
+  display: inline-block; font-size: .7rem; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text-faint); margin-bottom: .15rem;
+}
+.needs ul { margin: 0; padding-left: 1.1rem; color: var(--text-dim); }
+.gaps { margin: 0; font-size: .84rem; color: var(--warn); }
+.status { font-size: .85rem; }
+.status:not(:empty) {
+  padding: .45rem .6rem; border-radius: 7px;
+  background: var(--surface-2); color: var(--text-dim);
+}
+.status.up { background: var(--accent-soft); color: var(--accent-text); }
+.status.bad { background: var(--danger-soft); color: var(--danger); }
+.status a { color: inherit; font-weight: 600; }
+.actions { display: flex; align-items: center; gap: .5rem; margin-top: auto; padding-top: .3rem; flex-wrap: wrap; }
+button {
+  font: inherit; font-size: .86rem; padding: .4rem .8rem; cursor: pointer;
+  border-radius: 7px; border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text);
+}
+button:hover:not(:disabled) { border-color: var(--text-faint); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.src { margin-left: auto; color: var(--text-faint); font-size: .82rem; text-decoration: none; }
+.src:hover { color: var(--text-dim); text-decoration: underline; }
+form.change {
+  display: flex; flex-direction: column; gap: .5rem;
+  border-top: 1px solid var(--border); padding-top: .7rem; font-size: .86rem;
+}
+form.change label { color: var(--text-dim); font-size: .8rem; }
+textarea {
+  font: inherit; font-size: .88rem; width: 100%; resize: vertical;
+  padding: .5rem .6rem; border-radius: 7px;
+  border: 1px solid var(--border-strong); background: var(--bg); color: var(--text);
+}
+.file-label { display: flex; flex-direction: column; gap: .25rem; }
+input[type=file] { font-size: .8rem; color: var(--text-dim); }
+.change-actions { display: flex; gap: .5rem; }
+.legacy { margin: 1.5rem 0 0; color: var(--text-dim); font-size: .87rem; }
+.legacy code { font-family: var(--mono); font-size: .85em; }
+footer { margin-top: 2.5rem; color: var(--text-faint); font-size: .8rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Finance Team</h1>
+    <p class="sub">Tools built by Orion. Each one runs on your machine and takes your
+    real data at the moment you use it — none of it is stored here, and none of it
+    was given to the builder.</p>
+  </header>
+
+  <div class="banner" id="banner">Checking whether Orion is running…</div>
+
+  <div class="grid" id="grid">
+      <article class="card empty">
+        <h2>Nothing built yet</h2>
+        <p class="summary">Ask Orion for a tool and it will appear here.</p>
+      </article>
+  </div>
+
+  <footer>0 tools</footer>
+</div>
+
+<script>
+const DATA = {"defaultOrigin": "http://127.0.0.1:8000", "features": []};
+// Served by Orion -> talk to the same origin. Opened as a file:// copy -> fall
+// back to where Orion normally listens, which its CORS config already allows.
+const ORIGIN = location.protocol.startsWith("http") ? location.origin : DATA.defaultOrigin;
+const api = (path, opts) => fetch(ORIGIN + path, opts);
+const banner = document.getElementById("banner");
+const grid = document.getElementById("grid");
+let LIVE = false;
+
+const card = (slug) => grid.querySelector('.card[data-slug="' + CSS.escape(slug) + '"]');
+const setStatus = (slug, markup, cls) => {
+  const el = card(slug) && card(slug).querySelector('[data-role="status"]');
+  if (el) { el.className = "status " + (cls || ""); el.innerHTML = markup; }
+};
+const btn = (slug, act) =>
+  card(slug) && card(slug).querySelector('[data-act="' + act + '"]');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function offline(reason) {
+  LIVE = false;
+  banner.className = "banner";
+  banner.innerHTML =
+    "Orion isn't running, so these can't be started from here. Start it with " +
+    "<code>uvicorn app.main:app --reload</code> and open <code>" + esc(ORIGIN) +
+    "/systems</code>." + (reason ? " (" + esc(reason) + ")" : "");
+  grid.querySelectorAll('[data-act="open"], [data-act="change"]').forEach((b) => {
+    b.disabled = true;
+    b.title = "Needs Orion running";
+  });
+}
+
+function online() {
+  LIVE = true;
+  banner.className = "banner live";
+  banner.textContent = "Orion is running. Open a tool and it starts on demand.";
+  grid.querySelectorAll('[data-act="open"], [data-act="change"]').forEach((b) => {
+    b.disabled = false;
+    b.removeAttribute("title");
+  });
+}
+
+function applyRunning(running) {
+  const live = new Map(running.map((r) => [r.slug, r]));
+  for (const f of DATA.features) {
+    const app = live.get(f.slug);
+    const stopBtn = btn(f.slug, "stop");
+    if (app) {
+      setStatus(
+        f.slug,
+        'Running at <a href="' + esc(app.url) + '" target="_blank" rel="noopener">' +
+          esc(app.url) + "</a>",
+        "up",
+      );
+      if (stopBtn) stopBtn.hidden = false;
+    } else {
+      const el = card(f.slug) && card(f.slug).querySelector('[data-role="status"]');
+      // Leave any message this session put there (an error, "Stopped.", a
+      // change-request receipt); only clear a stale "Running at ..." badge.
+      if (el && el.classList.contains("up")) setStatus(f.slug, "");
+      if (stopBtn) stopBtn.hidden = true;
+    }
+  }
+}
+
+async function refresh() {
+  try {
+    const res = await api("/api/systems");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const body = await res.json();
+    online();
+    applyRunning(body.running || []);
+  } catch (err) {
+    offline(err.message);
+  }
+}
+
+async function openTool(slug) {
+  const b = btn(slug, "open");
+  const label = b.textContent;
+  b.disabled = true;
+  b.textContent = "Starting…";
+  setStatus(slug, "Starting — a first run installs dependencies and can take a minute.");
+  try {
+    const res = await api("/api/systems/" + encodeURIComponent(slug) + "/launch", {
+      method: "POST",
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.detail || "failed to start");
+    if (body.url) {
+      setStatus(
+        slug,
+        'Running at <a href="' + esc(body.url) + '" target="_blank" rel="noopener">' +
+          esc(body.url) + "</a>",
+        "up",
+      );
+      const stopBtn = btn(slug, "stop");
+      if (stopBtn) stopBtn.hidden = false;
+      window.open(body.url, "_blank", "noopener");
+    } else {
+      setStatus(slug, esc(body.detail || "Ran to completion."), "up");
+    }
+  } catch (err) {
+    setStatus(slug, "Could not start: " + esc(err.message), "bad");
+  } finally {
+    b.disabled = false;
+    b.textContent = label;
+  }
+}
+
+async function stopTool(slug) {
+  const b = btn(slug, "stop");
+  b.disabled = true;
+  try {
+    const res = await api("/api/systems/" + encodeURIComponent(slug) + "/stop", {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    setStatus(slug, "Stopped.");
+    b.hidden = true;
+  } catch (err) {
+    setStatus(slug, "Could not stop: " + esc(err.message), "bad");
+  } finally {
+    b.disabled = false;
+  }
+}
+
+async function sendChange(slug, form) {
+  const prompt = form.querySelector('[data-role="change-prompt"]').value.trim();
+  if (prompt.length < 8) {
+    setStatus(slug, "Describe the change in a little more detail.", "bad");
+    return;
+  }
+  const submit = form.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  submit.textContent = "Sending…";
+  const fd = new FormData();
+  fd.append("prompt", prompt);
+  for (const file of form.querySelector('[data-role="change-files"]').files) {
+    fd.append("files", file);
+  }
+  try {
+    const res = await api("/api/systems/" + encodeURIComponent(slug) + "/changes", {
+      method: "POST",
+      body: fd,
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.detail || "could not start the change");
+    form.hidden = true;
+    form.reset();
+    const watch = ORIGIN + "/?build=" + encodeURIComponent(body.id);
+    setStatus(
+      slug,
+      'Change requested — <a href="' + esc(watch) + '" target="_blank" rel="noopener">' +
+        "watch it build</a>. This tool restarts on the new version once it ships.",
+    );
+  } catch (err) {
+    setStatus(slug, "Change request failed: " + esc(err.message), "bad");
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Send change request";
+  }
+}
+
+grid.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-act]");
+  if (!target) return;
+  const host = target.closest(".card");
+  if (!host) return;
+  const slug = host.dataset.slug;
+  const act = target.dataset.act;
+  if (act === "open") openTool(slug);
+  if (act === "stop") stopTool(slug);
+  if (act === "change") {
+    const form = host.querySelector('[data-role="change"]');
+    form.hidden = !form.hidden;
+    if (!form.hidden) form.querySelector("textarea").focus();
+  }
+  if (act === "cancel-change") host.querySelector('[data-role="change"]').hidden = true;
+});
+
+grid.addEventListener("submit", (event) => {
+  const form = event.target.closest('[data-role="change"]');
+  if (!form) return;
+  event.preventDefault();
+  sendChange(form.closest(".card").dataset.slug, form);
+});
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>
