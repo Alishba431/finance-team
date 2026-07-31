@@ -3,6 +3,32 @@ let LAST_REPORT = null;
 
 const $ = (id) => document.getElementById(id);
 
+// ---------- Theme ----------
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  const btn = $("theme-toggle");
+  if (btn) btn.innerHTML = theme === "dark" ? "&#9728; Light mode" : "&#9789; Dark mode";
+  try { localStorage.setItem("bsat-theme", theme); } catch (e) { /* storage unavailable */ }
+}
+
+(function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem("bsat-theme"); } catch (e) { /* storage unavailable */ }
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dark" : "light"));
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = $("theme-toggle");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme");
+      applyTheme(current === "dark" ? "light" : "dark");
+    });
+  }
+});
+
 function fmt(n) {
   if (n === null || n === undefined || n === "") return "";
   const num = Number(n);

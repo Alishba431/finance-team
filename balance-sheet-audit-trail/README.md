@@ -42,6 +42,9 @@ so no one has to scroll through the whole GL by hand.
 7. Drill down into any TB/GL account to see its individual transactions,
    or export a CSV summary (per SOFP line → per TB/GL account) and a full
    GL transaction-detail CSV for the audit file.
+8. A **dark mode** toggle in the header switches the whole app to a dark
+   theme (it remembers your choice for next time via the browser's local
+   storage, and defaults to your OS preference on first visit).
 
 ## Running it
 

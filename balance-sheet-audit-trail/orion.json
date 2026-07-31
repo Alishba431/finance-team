@@ -2,11 +2,11 @@
   "slug": "balance-sheet-audit-trail",
   "system_id": "balance-sheet-audit-trail",
   "title": "Balance Sheet Audit Trail",
-  "summary": "Upload a workbook with SOFP, Trial Balance and General Ledger sheets and get an end-to-end audit trail for every Balance Sheet line, tracing reported closing balances down to the supporting TB accounts and GL transactions, with reconciliation differences and unmapped accounts flagged.",
-  "prompt": "when i hover on view transcations/unmap when one of the sofp is expanded its blue over blue and affects readibility can you fix that",
-  "version": 2,
+  "summary": "Upload a workbook with SOFP, Trial Balance and General Ledger sheets and get a line-by-line audit trail showing how each Statement of Financial Position figure ties back to its supporting TB accounts and GL transactions, with unmapped accounts flagged for you to assign.",
+  "prompt": "dark mode integration",
+  "version": 3,
   "created_at": "2026-07-30T17:51:16.544197+00:00",
-  "updated_at": "2026-07-30T17:58:37.352747+00:00",
+  "updated_at": "2026-07-31T11:00:24.804353+00:00",
   "run": {
     "install": [
       "pip install -r requirements.txt"
@@ -16,17 +16,18 @@
     "health_path": "/"
   },
   "assumptions": [
-    "SOFP sheet has a year-header row and the most recent year's column is the reported closing balance for each line",
-    "TB sheet has Debit/Credit columns (or a single Closing Balance column); when multiple Debit/Credit pairs exist, the one labelled End/Closing is used, else the rightmost pair",
-    "GL sheet has one block per account with an account-name row, optional Initial Balance row, and transaction rows with Date/Debit/Credit/Balance",
-    "Automatic TB-to-SOFP and GL-to-TB matching uses name similarity plus generic accounting terminology hints and may need manual correction via the unmapped-accounts UI"
+    "The SOFP sheet has a row of year headers and uses the most recent year's column as the reported closing balance",
+    "The TB sheet has Debit/Credit columns (or a single Closing Balance column); when several Debit/Credit pairs exist, the one labelled End/Closing is used",
+    "The GL sheet has one block per account: an account-name row, an optional Initial Balance row, then Date/Debit/Credit/Balance transaction rows",
+    "Automatic TB-to-SOFP-line and GL-to-TB-account matching is a starting suggestion based on name similarity and common accounting terms, not guaranteed to be fully correct",
+    "Nothing is persisted to disk; uploaded workbooks and reconciliation state live only in server memory for the running process"
   ],
   "gaps": [
-    "Note-linked disclosure sheets (e.g. fixed-asset or grant schedules referenced by a Note column) are not cross-referenced automatically",
-    "Sign-convention mismatches are flagged, not auto-corrected, since conventions vary by source system"
+    "Note-linked disclosures (separate note sheets referenced by a Note column on the SOFP) are not cross-referenced automatically",
+    "Sign-convention mismatches are flagged, not auto-corrected, since the correct convention can't be inferred reliably from the data alone"
   ],
   "expects": [
-    "An .xlsx/.xlsm workbook with at least a Statement of Financial Position (SOFP) sheet, a Trial Balance sheet, and a General Ledger sheet (sheet names configurable in the UI if they differ from the sample's 'SOFP', 'TB New 2025', 'GL New 2025')"
+    "An Excel workbook (.xlsx or .xlsm) containing a Statement of Financial Position (SOFP) sheet, a Trial Balance (TB) sheet, and a General Ledger (GL) sheet with one transaction block per account"
   ],
   "history": [
     {
@@ -40,6 +41,12 @@
       "prompt": "when i hover on view transcations/unmap when one of the sofp is expanded its blue over blue and affects readibility can you fix that",
       "build_id": "b_e6db6c7034",
       "at": "2026-07-30T17:58:37.352747+00:00"
+    },
+    {
+      "version": 3,
+      "prompt": "dark mode integration",
+      "build_id": "b_f8fab9505d",
+      "at": "2026-07-31T11:00:24.804353+00:00"
     }
   ]
 }
