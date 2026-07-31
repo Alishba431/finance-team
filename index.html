@@ -44,61 +44,58 @@ h1 { font-size: 1.55rem; margin: 0 0 .3rem; letter-spacing: -.01em; }
 }
 .banner.live { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
 .banner code { font-family: var(--mono); font-size: .85em; }
-.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
-.card {
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.tile {
+  position: relative;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 1.1rem 1.2rem 1rem; display: flex; flex-direction: column; gap: .6rem;
+  border-radius: 14px; box-shadow: var(--shadow);
+  padding: 1.15rem 1.1rem 1rem;
+  display: flex; flex-direction: column; gap: .45rem;
+  cursor: pointer; text-align: left;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
 }
-.card.empty { grid-column: 1 / -1; color: var(--text-dim); }
-.card.legacy-card { border-style: dashed; }
-.card.legacy-card .version { color: var(--warn); }
-.card header { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; }
-.card h2 { font-size: 1.05rem; margin: 0; letter-spacing: -.005em; }
-.version { color: var(--text-faint); font-size: .78rem; white-space: nowrap; }
-.summary { margin: 0; color: var(--text-dim); font-size: .92rem; }
-.needs { font-size: .84rem; }
-.needs-label, .gaps span {
-  display: inline-block; font-size: .7rem; letter-spacing: .04em;
-  text-transform: uppercase; color: var(--text-faint); margin-bottom: .15rem;
+.tile:hover, .tile:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 10px 24px rgba(0,0,0,.09);
+  outline: none;
 }
-.needs ul { margin: 0; padding-left: 1.1rem; color: var(--text-dim); }
-.gaps { margin: 0; font-size: .84rem; color: var(--warn); }
-.status { font-size: .85rem; }
-.status:not(:empty) {
-  padding: .45rem .6rem; border-radius: 7px;
-  background: var(--surface-2); color: var(--text-dim);
+.tile:active { transform: translateY(0); }
+.glyph {
+  width: 42px; height: 42px; border-radius: 11px;
+  display: grid; place-items: center; margin-bottom: .3rem;
+  background: var(--accent-soft); color: var(--accent-text);
+  font-weight: 700; font-size: .95rem; letter-spacing: .02em;
 }
-.status.up { background: var(--accent-soft); color: var(--accent-text); }
-.status.bad { background: var(--danger-soft); color: var(--danger); }
-.status a { color: inherit; font-weight: 600; }
-.actions { display: flex; align-items: center; gap: .5rem; margin-top: auto; padding-top: .3rem; flex-wrap: wrap; }
-button {
-  font: inherit; font-size: .86rem; padding: .4rem .8rem; cursor: pointer;
-  border-radius: 7px; border: 1px solid var(--border-strong);
-  background: var(--surface); color: var(--text);
+.tile-name { font-weight: 620; font-size: .98rem; letter-spacing: -.005em; }
+.tile-sub {
+  color: var(--text-dim); font-size: .84rem; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-button:hover:not(:disabled) { border-color: var(--text-faint); }
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.primary:hover:not(:disabled) { filter: brightness(1.08); }
-button:disabled { opacity: .5; cursor: not-allowed; }
-.src { margin-left: auto; color: var(--text-faint); font-size: .82rem; text-decoration: none; }
-.src:hover { color: var(--text-dim); text-decoration: underline; }
-form.change {
-  display: flex; flex-direction: column; gap: .5rem;
-  border-top: 1px solid var(--border); padding-top: .7rem; font-size: .86rem;
+.tile-status { font-size: .78rem; color: var(--text-faint); min-height: 1.1em; }
+.tile-status.up { color: var(--accent-text); font-weight: 600; }
+.tile-status.bad { color: var(--danger); }
+.tile-status.busy { color: var(--text-dim); }
+.tile-stop {
+  position: absolute; top: .7rem; right: .7rem;
+  font: inherit; font-size: .74rem; padding: .15rem .45rem; cursor: pointer;
+  border-radius: 6px; border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text-dim);
 }
-form.change label { color: var(--text-dim); font-size: .8rem; }
-textarea {
-  font: inherit; font-size: .88rem; width: 100%; resize: vertical;
-  padding: .5rem .6rem; border-radius: 7px;
-  border: 1px solid var(--border-strong); background: var(--bg); color: var(--text);
+.tile-stop:hover { color: var(--danger); border-color: var(--danger); }
+/* Running: a quiet dot in the corner, the way a phone marks a live app. */
+.tile.is-up .glyph { box-shadow: 0 0 0 2px var(--accent); }
+.tile-idle { cursor: default; opacity: .6; }
+.tile-idle:hover { transform: none; border-color: var(--border); box-shadow: var(--shadow); }
+.tile-idle .glyph { background: var(--surface-2); color: var(--text-faint); }
+.empty {
+  grid-column: 1 / -1; color: var(--text-dim);
+  background: var(--surface); border: 1px dashed var(--border);
+  border-radius: 14px; padding: 2rem 1.2rem; text-align: center;
 }
-.file-label { display: flex; flex-direction: column; gap: .25rem; }
-input[type=file] { font-size: .8rem; color: var(--text-dim); }
-.change-actions { display: flex; gap: .5rem; }
-.legacy { margin: 1.5rem 0 0; color: var(--text-dim); font-size: .87rem; }
-.legacy code { font-family: var(--mono); font-size: .85em; }
+.empty h2 { margin: 0 0 .3rem; font-size: 1rem; }
+.empty p { margin: 0; font-size: .9rem; }
 footer { margin-top: 2.5rem; color: var(--text-faint); font-size: .8rem; }
 </style>
 </head>
@@ -106,7 +103,7 @@ footer { margin-top: 2.5rem; color: var(--text-faint); font-size: .8rem; }
 <div class="wrap">
   <header class="top">
     <h1>Finance Team</h1>
-    <p class="sub">Tools built by Orion. Each one runs on your machine and takes your
+    <p class="sub">Tap a tool to open it. Each one runs on your machine and takes your
     real data at the moment you use it — none of it is stored here, and none of it
     was given to the builder.</p>
   </header>
@@ -114,34 +111,14 @@ footer { margin-top: 2.5rem; color: var(--text-faint); font-size: .8rem; }
   <div class="banner" id="banner">Checking whether Orion is running…</div>
 
   <div class="grid" id="grid">
-      <article class="card" data-slug="balance-sheet-audit-trail">
-        <header>
-          <h2>Balance Sheet Audit Trail</h2>
-          <span class="version">v2 · changed 30 Jul 2026</span>
-        </header>
-        <p class="summary">Upload a workbook with SOFP, Trial Balance and General Ledger sheets and get an end-to-end audit trail for every Balance Sheet line, tracing reported closing balances down to the supporting TB accounts and GL transactions, with reconciliation differences and unmapped accounts flagged.</p>
-        <div class="needs"><span class="needs-label">Bring</span><ul><li>An .xlsx/.xlsm workbook with at least a Statement of Financial Position (SOFP) sheet, a Trial Balance sheet, and a General Ledger sheet (sheet names configurable in the UI if they differ from the sample&#x27;s &#x27;SOFP&#x27;, &#x27;TB New 2025&#x27;, &#x27;GL New 2025&#x27;)</li></ul></div>
-        <p class="gaps"><span>Does not</span> Note-linked disclosure sheets (e.g. fixed-asset or grant schedules referenced by a Note column) are not cross-referenced automatically; Sign-convention mismatches are flagged, not auto-corrected, since conventions vary by source system</p>
-        <div class="status" data-role="status"></div>
-        <div class="actions">
-          <button data-act="open" class="primary">Open</button>
-          <button data-act="stop" hidden>Stop</button>
-          <button data-act="change">Request a change</button>
-          <a class="src" href="./balance-sheet-audit-trail/">Source</a>
-        </div>
-        <form class="change" data-role="change" hidden>
-          <label for="cr-balance-sheet-audit-trail">What should be different?</label>
-          <textarea id="cr-balance-sheet-audit-trail" data-role="change-prompt" rows="3"
-            placeholder="e.g. group the summary by cost centre, and let me pick the month"></textarea>
-          <label class="file-label">
-            Updated sample file (optional — shape only, never your real data)
-            <input type="file" data-role="change-files" multiple>
-          </label>
-          <div class="change-actions">
-            <button type="submit" class="primary">Send change request</button>
-            <button type="button" data-act="cancel-change">Cancel</button>
-          </div>
-        </form>
+      <article class="tile" data-slug="balance-sheet-audit-trail" role="button" tabindex="0"
+               aria-label="Open Balance Sheet Audit Trail" title="Upload a workbook with SOFP, Trial Balance and General Ledger sheets and get an end-to-end audit trail for every Balance Sheet line, tracing reported closing balances down to the supporting TB accounts and GL transactions, with reconciliation differences and unmapped accounts flagged. — bring: An .xlsx/.xlsm workbook with at least a Statement of Financial Position (SOFP) sheet, a Trial Balance sheet, and a General Ledger sheet (sheet names configurable in the UI if they differ from the sample&#x27;s &#x27;SOFP&#x27;, &#x27;TB New 2025&#x27;, &#x27;GL New 2025&#x27;)">
+        <span class="glyph" aria-hidden="true">BS</span>
+        <span class="tile-name">Balance Sheet Audit Trail</span>
+        <span class="tile-sub">Upload a workbook with SOFP, Trial Balance and General Ledger sheets and get an end-to-end audit trail for every Balance Sheet line, tracing reported closing balances down to the supporting TB accounts and GL transactions, with reconciliation differences and unmapped accounts flagged.</span>
+        <span class="tile-status" data-role="status"></span>
+        <button class="tile-stop" data-act="stop" hidden
+                aria-label="Stop Balance Sheet Audit Trail">Stop</button>
       </article>
   </div>
 
@@ -158,13 +135,12 @@ const banner = document.getElementById("banner");
 const grid = document.getElementById("grid");
 let LIVE = false;
 
-const card = (slug) => grid.querySelector('.card[data-slug="' + CSS.escape(slug) + '"]');
-const setStatus = (slug, markup, cls) => {
-  const el = card(slug) && card(slug).querySelector('[data-role="status"]');
-  if (el) { el.className = "status " + (cls || ""); el.innerHTML = markup; }
+const tile = (slug) => grid.querySelector('.tile[data-slug="' + CSS.escape(slug) + '"]');
+const statusEl = (slug) => tile(slug) && tile(slug).querySelector('[data-role="status"]');
+const setStatus = (slug, text, cls) => {
+  const el = statusEl(slug);
+  if (el) { el.className = "tile-status " + (cls || ""); el.textContent = text; }
 };
-const btn = (slug, act) =>
-  card(slug) && card(slug).querySelector('[data-act="' + act + '"]');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -172,42 +148,34 @@ function offline(reason) {
   LIVE = false;
   banner.className = "banner";
   banner.innerHTML =
-    "Orion isn't running, so these can't be started from here. Start it with " +
+    "Orion isn't running, so tools can't be opened from here. Start it with " +
     "<code>uvicorn app.main:app --reload</code> and open <code>" + esc(ORIGIN) +
     "/systems</code>." + (reason ? " (" + esc(reason) + ")" : "");
-  grid.querySelectorAll('[data-act="open"], [data-act="change"]').forEach((b) => {
-    b.disabled = true;
-    b.title = "Needs Orion running";
-  });
 }
 
 function online() {
   LIVE = true;
   banner.className = "banner live";
-  banner.textContent = "Orion is running. Open a tool and it starts on demand.";
-  grid.querySelectorAll('[data-act="open"], [data-act="change"]').forEach((b) => {
-    b.disabled = false;
-    b.removeAttribute("title");
-  });
+  banner.textContent = "Ready — tap a tool to open it.";
 }
 
 function applyRunning(running) {
   const live = new Map(running.map((r) => [r.slug, r]));
   for (const f of DATA.features) {
+    const host = tile(f.slug);
+    if (!host) continue;
     const app = live.get(f.slug);
-    const stopBtn = btn(f.slug, "stop");
+    const stopBtn = host.querySelector('[data-act="stop"]');
+    host.classList.toggle("is-up", Boolean(app));
     if (app) {
-      setStatus(
-        f.slug,
-        'Running at <a href="' + esc(app.url) + '" target="_blank" rel="noopener">' +
-          esc(app.url) + "</a>",
-        "up",
-      );
+      host.dataset.url = app.url;
+      setStatus(f.slug, "Running", "up");
       if (stopBtn) stopBtn.hidden = false;
     } else {
-      const el = card(f.slug) && card(f.slug).querySelector('[data-role="status"]');
-      // Leave any message this session put there (an error, "Stopped.", a
-      // change-request receipt); only clear a stale "Running at ..." badge.
+      delete host.dataset.url;
+      // Leave a message this session put there (an error, "Stopped"); only
+      // clear a stale "Running" badge.
+      const el = statusEl(f.slug);
       if (el && el.classList.contains("up")) setStatus(f.slug, "");
       if (stopBtn) stopBtn.hidden = true;
     }
@@ -227,11 +195,17 @@ async function refresh() {
 }
 
 async function openTool(slug) {
-  const b = btn(slug, "open");
-  const label = b.textContent;
-  b.disabled = true;
-  b.textContent = "Starting…";
-  setStatus(slug, "Starting — a first run installs dependencies and can take a minute.");
+  const host = tile(slug);
+  if (!host || host.dataset.busy) return;
+
+  // Already running: just bring it to the front, no round trip.
+  if (host.dataset.url) {
+    window.open(host.dataset.url, "_blank", "noopener");
+    return;
+  }
+
+  host.dataset.busy = "1";
+  setStatus(slug, "Starting…", "busy");
   try {
     const res = await api("/api/systems/" + encodeURIComponent(slug) + "/launch", {
       method: "POST",
@@ -239,102 +213,61 @@ async function openTool(slug) {
     const body = await res.json();
     if (!res.ok) throw new Error(body.detail || "failed to start");
     if (body.url) {
-      setStatus(
-        slug,
-        'Running at <a href="' + esc(body.url) + '" target="_blank" rel="noopener">' +
-          esc(body.url) + "</a>",
-        "up",
-      );
-      const stopBtn = btn(slug, "stop");
+      host.dataset.url = body.url;
+      host.classList.add("is-up");
+      setStatus(slug, "Running", "up");
+      const stopBtn = host.querySelector('[data-act="stop"]');
       if (stopBtn) stopBtn.hidden = false;
       window.open(body.url, "_blank", "noopener");
     } else {
-      setStatus(slug, esc(body.detail || "Ran to completion."), "up");
+      setStatus(slug, body.detail || "Finished", "up");
     }
   } catch (err) {
-    setStatus(slug, "Could not start: " + esc(err.message), "bad");
+    setStatus(slug, err.message, "bad");
   } finally {
-    b.disabled = false;
-    b.textContent = label;
+    delete host.dataset.busy;
   }
 }
 
 async function stopTool(slug) {
-  const b = btn(slug, "stop");
-  b.disabled = true;
+  const host = tile(slug);
+  const stopBtn = host && host.querySelector('[data-act="stop"]');
+  if (stopBtn) stopBtn.disabled = true;
   try {
     const res = await api("/api/systems/" + encodeURIComponent(slug) + "/stop", {
       method: "POST",
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    setStatus(slug, "Stopped.");
-    b.hidden = true;
+    delete host.dataset.url;
+    host.classList.remove("is-up");
+    setStatus(slug, "Stopped");
+    if (stopBtn) stopBtn.hidden = true;
   } catch (err) {
-    setStatus(slug, "Could not stop: " + esc(err.message), "bad");
+    setStatus(slug, err.message, "bad");
   } finally {
-    b.disabled = false;
-  }
-}
-
-async function sendChange(slug, form) {
-  const prompt = form.querySelector('[data-role="change-prompt"]').value.trim();
-  if (prompt.length < 8) {
-    setStatus(slug, "Describe the change in a little more detail.", "bad");
-    return;
-  }
-  const submit = form.querySelector('button[type="submit"]');
-  submit.disabled = true;
-  submit.textContent = "Sending…";
-  const fd = new FormData();
-  fd.append("prompt", prompt);
-  for (const file of form.querySelector('[data-role="change-files"]').files) {
-    fd.append("files", file);
-  }
-  try {
-    const res = await api("/api/systems/" + encodeURIComponent(slug) + "/changes", {
-      method: "POST",
-      body: fd,
-    });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.detail || "could not start the change");
-    form.hidden = true;
-    form.reset();
-    const watch = ORIGIN + "/?build=" + encodeURIComponent(body.id);
-    setStatus(
-      slug,
-      'Change requested — <a href="' + esc(watch) + '" target="_blank" rel="noopener">' +
-        "watch it build</a>. This tool restarts on the new version once it ships.",
-    );
-  } catch (err) {
-    setStatus(slug, "Change request failed: " + esc(err.message), "bad");
-  } finally {
-    submit.disabled = false;
-    submit.textContent = "Send change request";
+    if (stopBtn) stopBtn.disabled = false;
   }
 }
 
 grid.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-act]");
-  if (!target) return;
-  const host = target.closest(".card");
-  if (!host) return;
-  const slug = host.dataset.slug;
-  const act = target.dataset.act;
-  if (act === "open") openTool(slug);
-  if (act === "stop") stopTool(slug);
-  if (act === "change") {
-    const form = host.querySelector('[data-role="change"]');
-    form.hidden = !form.hidden;
-    if (!form.hidden) form.querySelector("textarea").focus();
+  const host = event.target.closest(".tile");
+  if (!host || host.classList.contains("tile-idle")) return;
+  // The Stop control sits inside the tile, so it has to claim the click before
+  // the tile's own handler treats it as "open me".
+  if (event.target.closest('[data-act="stop"]')) {
+    event.stopPropagation();
+    stopTool(host.dataset.slug);
+    return;
   }
-  if (act === "cancel-change") host.querySelector('[data-role="change"]').hidden = true;
+  openTool(host.dataset.slug);
 });
 
-grid.addEventListener("submit", (event) => {
-  const form = event.target.closest('[data-role="change"]');
-  if (!form) return;
+grid.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const host = event.target.closest(".tile");
+  if (!host || host.classList.contains("tile-idle")) return;
   event.preventDefault();
-  sendChange(form.closest(".card").dataset.slug, form);
+  openTool(host.dataset.slug);
 });
 
 refresh();
