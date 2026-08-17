@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fixed Asset Register Updater</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --navy: #14213d; --blue: #2563eb; --bg: #f6f7fb; --card: #ffffff;
+    --border: #d8dce6; --green: #16794f; --red: #b42318;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: #1f2430; margin: 0; padding: 2rem 1rem;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { color: var(--navy); font-size: 1.6rem; margin-bottom: 0.25rem; }
+  p.lead { color: #555; margin-top: 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  label { display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.92rem; }
+  .hint { font-weight: 400; color: #666; font-size: 0.82rem; margin: 0.15rem 0 0.5rem; }
+  input[type=file], input[type=date], input[type=number], input[type=text] {
+    width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 0.95rem; margin-bottom: 1rem; background: #fff;
+  }
+  .row { display: flex; gap: 1rem; }
+  .row > div { flex: 1; }
+  button {
+    background: var(--blue); color: white; border: none; padding: 0.7rem 1.4rem;
+    border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: 600;
+  }
+  button:disabled { opacity: 0.6; cursor: wait; }
+  #status { margin-top: 1rem; font-size: 0.92rem; }
+  #status.error { color: var(--red); white-space: pre-wrap; }
+  #status.ok { color: var(--green); }
+  .section-title { font-size: 1.05rem; font-weight: 700; color: var(--navy); margin: 0 0 0.75rem; }
+  .required { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fixed Asset Register Updater</h1>
+  <p class="lead">Upload your existing FAR, this period's Fixed Asset GL entries, and any invoices — get back an updated FAR workbook with new additions and rolled-forward depreciation. Your original file is never changed.</p>
+
+  <form id="far-form">
+    <div class="card">
+      <div class="section-title">Required files</div>
+      <label>Existing FAR workbook (.xlsx) <span class="required">*</span></label>
+      <p class="hint">The exact FAR file you already maintain, with the "FAR Schedule" sheet and category sheets.</p>
+      <input type="file" name="far_file" accept=".xlsx" required>
+
+      <label>Fixed Asset GL entries for the period (.xlsx or .csv) <span class="required">*</span></label>
+      <p class="hint">One row per addition: date, a unique voucher/reference, the GL account/category, and the amount.</p>
+      <input type="file" name="gl_file" accept=".xlsx,.csv" required>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Invoices for new additions (optional, but recommended)</div>
+      <label>Invoice register (.xlsx or .csv)</label>
+      <p class="hint">Columns: invoice number, invoice date, vendor, description, amount, and optionally category/reference. This is the most reliable way to feed invoice data in.</p>
+      <input type="file" name="invoice_register" accept=".xlsx,.csv">
+
+      <label>Or raw invoice files (.pdf / .txt), multiple allowed</label>
+      <p class="hint">Best-effort text extraction only (no OCR/handwriting recognition). Scanned invoices with no extractable text are treated as "no invoice" and flagged for review.</p>
+      <input type="file" name="invoice_files" accept=".pdf,.txt" multiple>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Period details</div>
+      <div class="row">
+        <div>
+          <label>Period end date <span class="required">*</span></label>
+          <p class="hint">The "as of" date for this update run.</p>
+          <input type="date" name="period_end_date" required>
+        </div>
+        <div>
+          <label>Period length (months) <span class="required">*</span></label>
+          <p class="hint">1 for monthly, 3 for quarterly, etc.</p>
+          <input type="number" name="period_months" min="1" max="12" value="1" required>
+        </div>
+      </div>
+      <label>Fiscal year-end override (MM-DD, optional)</label>
+      <p class="hint">Leave blank to auto-detect from the FAR Schedule sheet's title (e.g. "AS ON JUNE 30, 2025").</p>
+      <input type="text" name="fiscal_year_end" placeholder="e.g. 06-30">
+    </div>
+
+    <button type="submit" id="submit-btn">Update FAR</button>
+    <div id="status"></div>
+  </form>
+</div>
+
+<script>
+const form = document.getElementById('far-form');
+const statusDiv = document.getElementById('status');
+const btn = document.getElementById('submit-btn');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  statusDiv.className = '';
+  statusDiv.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+
+  const formData = new FormData(form);
+  try {
+    const resp = await fetch('/process', { method: 'POST', body: formData });
+    if (!resp.ok) {
+      let msg = 'The update could not be completed.';
+      try {
+        const errJson = await resp.json();
+        msg = errJson.error || msg;
+      } catch (_) { /* ignore */ }
+      statusDiv.className = 'error';
+      statusDiv.textContent = msg;
+      return;
+    }
+    const additions = resp.headers.get('X-FAR-Summary-Additions') || '0';
+    const review = resp.headers.get('X-FAR-Summary-NeedsReview') || '0';
+    const disposition = resp.headers.get('Content-Disposition') || '';
+    const match = /filename="([^"]+)"/.exec(disposition);
+    const filename = match ? match[1] : 'FAR_Updated.xlsx';
+
+    const blob = await resp.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    statusDiv.className = 'ok';
+    statusDiv.textContent = `Done — downloaded ${filename}. ${additions} new addition(s) added, ${review} item(s) on the Needs Review sheet.`;
+  } catch (err) {
+    statusDiv.className = 'error';
+    statusDiv.textContent = 'Unexpected error: ' + err;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Update FAR';
+  }
+});
+</script>
+</body>
+</html>
