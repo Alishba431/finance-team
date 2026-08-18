@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixed Asset Register Auto-Updater</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>Fixed Asset Register Auto-Updater</h1>
+  <p class="sub">Upload your existing FAR once as the baseline. From then on, just add the new
+    invoices and matching GL whenever you have them - no period or date range needed. New
+    assets get added to the right tab, and depreciation is carried forward the same way your
+    FAR already calculates it, continuing from wherever the register last left off.</p>
+
+  <section class="card">
+    <h2>1. Baseline FAR</h2>
+    <div id="baseline-status" class="status">Loading current status…</div>
+    <form id="baseline-form">
+      <label class="file-label">FAR workbook (.xlsx)
+        <input type="file" id="far-file" accept=".xlsx,.xlsm" required>
+      </label>
+      <button type="submit">Upload Baseline FAR</button>
+    </form>
+    <p class="hint">Upload this once. Re-uploading replaces the current register and starts a
+      fresh baseline - only do this if you want to start over.</p>
+    <div id="baseline-result"></div>
+  </section>
+
+  <section class="card">
+    <h2>2. Update the Register</h2>
+    <p class="hint">No period or date range to fill in - just hand over this batch of invoices
+      and the matching GL, and the tool picks up from wherever the register last left off.</p>
+    <form id="update-form">
+      <label class="file-label">Invoices for the new purchases (PDF or image, one or more files)
+        <input type="file" id="invoice-files" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp" multiple required>
+      </label>
+      <label class="file-label">GL covering those transactions (.xlsx, .xlsm, .xls or .csv)
+        <input type="file" id="gl-file" accept=".xlsx,.xlsm,.xls,.csv" required>
+      </label>
+      <p class="hint">If your GL already lives as a sheet inside the FAR workbook you maintain
+        (the way it does today), just upload that same workbook here - the tool will find the
+        GL sheet on its own; it only reads the FAR's own tabs from the register it is already
+        tracking, so nothing else in this file gets used or overwritten.</p>
+      <button type="submit" id="run-btn">Run Update</button>
+    </form>
+    <div id="update-status" class="status"></div>
+  </section>
+
+  <section class="card" id="results-section" style="display:none">
+    <h2>Result</h2>
+    <div id="results"></div>
+  </section>
+
+  <section class="card">
+    <h2>Current Register</h2>
+    <div id="closing-date" class="hint"></div>
+    <div id="tabs-summary"></div>
+    <a id="download-link" class="button" href="/api/download">Download current FAR</a>
+  </section>
+
+  <section class="card">
+    <h2>Run History</h2>
+    <div id="history"></div>
+  </section>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
