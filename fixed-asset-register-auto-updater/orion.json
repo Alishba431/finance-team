@@ -2,11 +2,11 @@
   "slug": "fixed-asset-register-auto-updater",
   "system_id": "fixed-asset-register-auto-updater",
   "title": "Fixed Asset Register Auto-Updater",
-  "summary": "Upload your Fixed Asset Register once as the baseline, then each period upload that period's invoices (PDF or image, including photos/scans) and GL to have new asset additions and identifiable disposals added into the correct existing tab, with depreciation continued exactly as the baseline FAR already calculates it.",
-  "prompt": "When i upload OCR it says The OCR engine (tesseract) is not installed on this machine, so image invoices cannot be read automatically.",
-  "version": 2,
+  "summary": "Upload your Fixed Asset Register once as a baseline, then each period upload that period's invoices and GL; the tool files new purchases into the correct existing asset tab, calculates depreciation the same way the register already does, applies disposals to the matching existing row, and lists anything it couldn't confidently resolve for you to handle by hand.",
+  "prompt": "Rather than rejecting the file, it should be smart enough to:\r\n\r\nNotice when a row is just an account name (like \"41501 Computer Equipments\") sitting by itself \u2014 and treat everything below it as belonging to that account, until the next account name shows up.\r\nSkip non-transaction rows like \"Initial Balance\" or subtotal rows \u2014 those aren't individual purchases, they're running totals.\r\nFigure out which column is the date and which is the amount by looking at the actual data in each row (dates look like dates, amounts are numbers), rather than requiring a labeled header that says \"Date\" or \"Amount\" whatever info is missing get it from the invoice",
+  "version": 3,
   "created_at": "2026-08-18T18:51:06.018829+00:00",
-  "updated_at": "2026-08-19T07:08:40.859907+00:00",
+  "updated_at": "2026-08-19T08:39:10.944496+00:00",
   "run": {
     "install": [
       "pip install -r requirements.txt"
@@ -16,22 +16,19 @@
     "health_path": "/health"
   },
   "assumptions": [
-    "Invoice reading (including photographed/scanned images) runs using a local, free OCR engine (rapidocr-onnxruntime) that installs entirely via pip - no separate system install (e.g. Tesseract) is required on the machine, and no image is ever sent to an external service",
-    "The GL file has at least a date, amount, description/reference, and account/classification column; if a GL extract lacks the classification column, its rows show up as exceptions rather than being auto-classified by guesswork",
-    "Matching invoices to GL lines relies on date, amount and reference number/vendor being reasonably consistent between the two",
-    "The updated FAR file becomes the new baseline for the next period automatically - the baseline is not re-uploaded each time",
-    "Reasonable validation means the checks in the exceptions list (duplicates, unmatched invoices/GL lines, amount mismatches, unclear classification); it is not a full audit-style review of every entry"
+    "The baseline FAR's existing tab/column layout is exactly what future updates should match; no new tab, column, or asset class is ever added",
+    "The GL is a flat table with a recognizable header row (not a sectioned ledger export with account names as row headings and no repeated header)",
+    "An invoice matches a GL line by amount + date within a tolerance window, boosted by vendor/reference where present; more than one plausible match is treated as an exception rather than guessed",
+    "The period each run covers is derived automatically from the register's own last recorded closing position through to the latest transaction date found in that run's own files \u2014 never asked of the user",
+    "Only text-based PDFs and plain image files (PNG/JPG/TIFF/BMP) are read automatically via the built-in local OCR engine; scanned PDFs without a text layer are not"
   ],
   "gaps": [
-    "Scanned PDFs with no text layer are not OCR'd (only text-based PDFs and plain image files); a scanned PDF is listed as an exception rather than guessed at",
-    "GL files that are a sectioned ledger export (no repeated header row with Date/Amount/Account columns) are not parsed and must be re-exported as a flat table",
-    "No automatic resolution of exceptions - flagged items always need manual review",
-    "No handling of revaluations, impairments, or transfers between asset classes - only additions and identifiable disposals"
+    "Reading a 'sectioned ledger' style register (account-code-and-name row followed by unlabeled purchase rows, no repeated header, running-total rows like 'Initial Balance'/'Subtotal' interspersed) was requested but is not implemented in this version \u2014 the finance user tried an earlier attempt at this and asked to undo it, so the tool still requires the GL to be a flat table with a recognizable header row; a sectioned-ledger register upload will be reported as unrecognized rather than parsed",
+    "Vendor/tax/approval information is not extracted from invoices, and disposals are recognized only from GL narration keywords (disposal, written off, scrap, sold), not from an explicit disposal flag"
   ],
   "expects": [
-    "The existing Fixed Asset Register as an Excel workbook (.xlsx/.xlsm), uploaded once as the baseline",
-    "Each period's fixed asset addition invoices as PDF or image files (including photographed/scanned invoices)",
-    "The General Ledger for that same period as .xlsx/.xlsm/.xls or .csv, with at least a date, amount, description/reference and account/classification column"
+    "The current Fixed Asset Register as an Excel workbook (.xlsx/.xlsm), uploaded once as the baseline",
+    "Each period: the new invoices as PDF or image files (including scans/photos), plus the GL covering those same transactions as .xlsx/.xlsm/.xls/.csv (a flat table with a Date, Amount and Account/Classification header row) \u2014 or the same FAR/GL workbook if the GL lives inside it as a sheet"
   ],
   "history": [
     {
@@ -45,6 +42,12 @@
       "prompt": "When i upload OCR it says The OCR engine (tesseract) is not installed on this machine, so image invoices cannot be read automatically.",
       "build_id": "b_ab25eb7d11",
       "at": "2026-08-19T07:08:40.859907+00:00"
+    },
+    {
+      "version": 3,
+      "prompt": "Rather than rejecting the file, it should be smart enough to:\r\n\r\nNotice when a row is just an account name (like \"41501 Computer Equipments\") sitting by itself \u2014 and treat everything below it as belonging to that account, until the next account name shows up.\r\nSkip non-transaction rows like \"Initial Balance\" or subtotal rows \u2014 those aren't individual purchases, they're running totals.\r\nFigure out which column is the date and which is the amount by looking at the actual data in each row (dates look like dates, amounts are numbers), rather than requiring a labeled header that says \"Date\" or \"Amount\" whatever info is missing get it from the invoice",
+      "build_id": "b_2d794b6d38",
+      "at": "2026-08-19T08:39:10.944496+00:00"
     }
   ]
 }
