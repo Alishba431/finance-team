@@ -11,14 +11,42 @@ import io
 import re
 import csv
 import json
-import shutil
 import pathlib
 import difflib
 import datetime
 from collections import Counter
 
 import openpyxl
+import numpy as np
+from PIL import Image
 from dateutil import parser as dateutil_parser
+
+try:
+    # Pure-Python/ONNX local OCR engine - no system binary (e.g. tesseract)
+    # needs to be separately installed on the machine; the model files ship
+    # inside the pip package itself, and nothing is sent anywhere over the
+    # network at run time.
+    from rapidocr_onnxruntime import RapidOCR
+except Exception:
+    RapidOCR = None
+
+_OCR_ENGINE = None
+
+
+def get_ocr_engine():
+    """Lazily construct the OCR engine on first use (keeps app startup fast
+    and lets the rest of the app run fine even if this optional dependency
+    is somehow missing - image invoices just become exceptions instead)."""
+    global _OCR_ENGINE
+    if RapidOCR is None:
+        raise RuntimeError(
+            "The local OCR engine (rapidocr-onnxruntime) is not installed. "
+            "Run: pip install -r requirements.txt"
+        )
+    if _OCR_ENGINE is None:
+        _OCR_ENGINE = RapidOCR()
+    return _OCR_ENGINE
+
 
 BASE_DIR = pathlib.Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
@@ -502,14 +530,10 @@ def extract_invoice(filename, data):
                                     "provide a text-based PDF or a plain image file instead.")
                 return result
         elif ext in ("png", "jpg", "jpeg", "tif", "tiff", "bmp"):
-            if shutil.which("tesseract") is None:
-                result["error"] = ("The OCR engine (tesseract) is not installed on this "
-                                    "machine, so image invoices cannot be read automatically.")
-                return result
-            from PIL import Image
-            import pytesseract
-            img = Image.open(io.BytesIO(data))
-            text = pytesseract.image_to_string(img)
+            engine = get_ocr_engine()
+            img = Image.open(io.BytesIO(data)).convert("RGB")
+            ocr_lines, _ = engine(np.array(img))
+            text = "\n".join(line[1] for line in (ocr_lines or []) if len(line) > 1 and line[1])
             if not text or len(text.strip()) < 5:
                 result["error"] = "Could not extract any readable text from this image."
                 return result

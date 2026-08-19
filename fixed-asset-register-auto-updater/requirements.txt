@@ -4,5 +4,6 @@ python-multipart
 openpyxl
 pdfplumber
 Pillow
-pytesseract
+numpy
+rapidocr-onnxruntime
 python-dateutil

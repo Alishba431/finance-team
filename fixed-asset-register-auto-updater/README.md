@@ -55,14 +55,18 @@ environment variable, if set). Open it in a browser.
 On first start, with no FAR uploaded yet, the app runs fine and simply shows
 an empty state asking you to upload your baseline FAR.
 
-### Optional: OCR for image invoices
+### OCR for image invoices
 
-Reading **image** invoices (PNG/JPG/etc.) requires the `tesseract` OCR engine
-to be installed on the machine (a system package, not a Python package -
-e.g. `apt install tesseract-ocr` on Debian/Ubuntu, `brew install tesseract`
-on macOS). If it isn't installed, image invoices are simply flagged in
-Exceptions as unreadable rather than guessed at. **PDF invoices with a normal
-text layer work without any extra install.**
+Reading **image** invoices (PNG/JPG/TIFF/BMP - including photos and scans)
+uses a local, free OCR engine (`rapidocr-onnxruntime`) that installs entirely
+via `pip install -r requirements.txt`, with its recognition models bundled
+inside the Python package itself. There is **no separate system install**
+(no `tesseract`, no `apt`/`brew` step) and no image is ever sent anywhere -
+recognition runs fully on this machine. **PDF invoices with a normal text
+layer work the same way they always have, with no OCR needed.** If an image
+is too blurry/unclear for the OCR engine to extract usable text, that invoice
+is simply flagged in Exceptions for manual review rather than guessed at, and
+the rest of the batch keeps processing.
 
 ## How the tool decides things (so you don't have to)
 
@@ -133,8 +137,9 @@ silently skipped rather than added again or flagged as an exception.
 ## Known limitations (gaps)
 
 - **Scanned PDFs without a text layer are not OCR'd** - only text-based PDFs
-  and (with `tesseract` installed) plain images are read. A scanned PDF will
-  be listed as an exception rather than guessed at.
+  and plain image files (PNG/JPG/TIFF/BMP, via the built-in local OCR engine)
+  are read. A scanned PDF will be listed as an exception rather than guessed
+  at; save it as an image instead if you need it read automatically.
 - **The GL must be a flat table with a header row** containing recognizable
   Date/Amount/Account-classification columns. A "sectioned ledger" export
   (account name as a row heading, followed by unlabeled transaction rows,

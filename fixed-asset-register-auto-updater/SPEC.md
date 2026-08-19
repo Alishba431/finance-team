@@ -1,52 +1,43 @@
-# Fixed Asset Register (FAR) Auto-Updater
+# Fixed Asset Register Auto-Updater
 
 ## What it does
-This tool takes your existing Fixed Asset Register, uploaded once, and updates it every period by reading new purchase invoices and the matching GL entries — adding new assets to the correct existing tab, continuing depreciation exactly the way your FAR already calculates it, and leaving all historical data untouched. Each run produces the same FAR file, just carried forward, plus a list of anything it couldn't confidently process.
+This tool takes your existing Fixed Asset Register (FAR) and updates it for a new period using that period's invoices and General Ledger (GL). It reads the invoices — including scanned or photographed images — to pull out asset details, uses the GL to classify and validate each transaction, and adds the new assets into the correct existing tab of your FAR with depreciation continued in the same way it's always been calculated.
 
 ## What you give it
-- **The baseline FAR (uploaded once)** — your existing FAR workbook, in the same tab/column layout as what you currently maintain (e.g. separate tabs per asset class such as Computer Equipment, Furniture & Fixtures, Mobile Phones, Vehicles, etc., each with columns like Description, Date of Purchase, Cost, Depreciation Rate, Accumulated Depreciation, WDV). The tool reads this once to learn your structure, rates, and formulas. If a tab or column it needs to update is missing or laid out in a way it can't recognize, that tab is left untouched and reported as an exception rather than guessed at.
-- **Invoices, each period** — PDF or image invoices for new asset purchases (one file per invoice or a batch of files). The tool reads description, date, vendor, invoice/reference number, and amount off each one using document scanning. An invoice it cannot read clearly (blurry, missing amount, missing date) is skipped and flagged, not guessed.
-- **GL, each period** — the general ledger extract covering the same transactions, showing at minimum the transaction date, amount, and the account/classification (e.g. "Computer Equipment") it was posted to. This is what tells the tool which existing FAR tab a purchase belongs in. A GL file without a recognizable classification column is rejected for that run and flagged.
-
-If either invoices or GL are missing for a period, the tool does not process that period — it reports "nothing to update" rather than adding assets from only one source.
+- **Baseline FAR** (your existing Register, Excel file) — uploaded once. This is read exactly as-is: its tabs, asset classes, columns, depreciation rates/method, formulas and layout are the reference for everything the tool does afterward. You are not asked to redefine any of this.
+- **Invoices** for the period — PDF or image files (including photos/scans). The tool reads asset description, date, vendor, invoice/reference number, and amount from each one. If an invoice image is too unclear to read automatically, it is set aside as an exception for you to review rather than guessed at or dropped — the rest of the batch keeps processing normally.
+- **GL** for the same period (spreadsheet) — used to confirm which asset-class tab a transaction belongs to and to check the accounting entry. It needs, at minimum, a date, an amount, a description/reference, and the account or classification the transaction was posted to. If a GL row is missing the classification or doesn't match any invoice, it is flagged rather than guessed.
 
 ## What it gives you back
-A single updated FAR workbook (same file, carried forward) with:
-- All existing tabs, historical assets, and prior-period figures exactly as they were.
-- New assets added as new rows in the correct existing tab, with the same columns already used (description, purchase date, cost, rate, accumulated depreciation, WDV, etc.).
-- Depreciation and carrying-amount figures recalculated for the period using the same method and rates already present in that tab.
-- A new tab, **"Exceptions – Review Required,"** listing every item the tool could not process, with the reason (e.g. "invoice unreadable," "no matching GL entry," "amount mismatch," "could not classify").
-
-The tool also keeps this updated FAR internally, so next period you only need to supply that period's invoices and GL — you don't need to re-upload the FAR unless you want to start over from a fresh baseline.
+An updated version of the same FAR file — same workbook, same tabs, same formulas and formatting — with the new period's assets added into their correct existing sections and depreciation carried forward. Alongside it, a short exceptions list (on screen and/or as a sheet in the workbook) showing anything that needed your attention: unreadable invoices, unmatched invoices/GL lines, amount mismatches, or transactions that couldn't be classified.
 
 ## Rules it follows
-1. The most recently uploaded or produced FAR is always the starting point; nothing before its closing balances is ever recalculated or rewritten.
-2. A new asset is only added when an invoice and a GL entry can be matched to each other — matching is done by amount and date being reasonably close, and, where available, vendor name or reference number.
-3. The GL entry's account/classification decides which existing FAR tab the asset goes into (e.g. a GL line under "Computer Equipment" → the existing Computer Equipment tab). The invoice supplies the descriptive detail (description, vendor, invoice number, exact date, amount) for that row.
-4. A new asset is depreciated using the same rate, useful-life logic, and calculation formulas already present in the tab it's added to — these are read from the existing FAR and never asked of you or re-entered.
-5. The month an asset is purchased is charged a full month of depreciation, regardless of the day of purchase within that month.
-6. When a disposal can be identified from the GL/supporting information, the existing asset row is updated (not treated as a new addition); depreciation stops after the month before the disposal month, and no depreciation is charged in the disposal month itself, following the disposal treatment already used in that FAR tab.
-7. A transaction already recorded in the FAR (matched by amount, date, vendor, and/or reference number) is not added again, even if it reappears in a later period's invoices or GL.
-8. An invoice with no matching GL entry, a GL entry with no matching invoice, a matched pair whose amounts disagree, or a transaction that cannot be assigned to any existing tab is not added to the FAR — it is listed on the Exceptions tab with the reason instead.
+1. The uploaded baseline FAR is never rebuilt or restructured — the tool only adds to it from its current closing position onward.
+2. Every invoice is matched to a GL transaction using date, amount and reference; the GL entry's account determines which existing FAR tab/asset class the new asset is added to.
+3. Asset details (description, date, vendor, invoice number, amount) come from the invoice; classification and validation come from the GL — neither source is used alone.
+4. Depreciation for a newly added asset starts the same month it is purchased, regardless of the day of the month.
+5. If a disposal is identified from the GL, depreciation stops the month before the disposal month, and the tool updates the existing asset record rather than adding a new one.
+6. Depreciation rate, useful life, method and presentation for each asset class are taken from what's already in the uploaded FAR — never asked for separately.
+7. A transaction already present in the FAR (matched by invoice/reference number) is not added again.
+8. If an invoice image cannot be read automatically, it is flagged as an exception for manual review and the rest of the batch continues processing.
+9. Anything that cannot be matched, classified, or reconciled (duplicate transaction, invoice with no GL match, GL line with no invoice match, amount mismatch, unclear classification) is listed as an exception, not guessed into the FAR.
 
 ## What I am assuming
-- The baseline FAR's tab layout (one tab per asset class) and column layout, as shown in your current file, is what every future update must match — the tool will not introduce new tabs, columns, or asset classes on its own.
-- Invoices are supplied as PDFs/images and read via automated document scanning; if a scan misreads a value, that invoice goes to Exceptions rather than being silently entered wrong — there's no manual correction step in the tool itself before that.
-- "Matching" an invoice to a GL line means reasonably close amount and date (and vendor/reference where present) — an exact, single unambiguous match is required; anything with more than one plausible match, or no match, is an exception.
-- You will review and manually resolve items on the Exceptions tab yourself (e.g. by re-supplying a clearer invoice next period) — the tool does not re-attempt them automatically.
-- Each update run covers one period's invoices and GL together; you are responsible for making sure the invoice batch and GL extract you upload together belong to the same period.
-- The tool updates only the FAR itself — it does not touch or reconcile against your general ledger, trial balance, or financial statements beyond using the GL as a classification/validation input.
+- Invoice reading (including images) runs using a free, locally installed reader (Tesseract) rather than a paid cloud OCR service — per your instruction.
+- The GL file has at least a date, amount, description/reference, and account/classification column; if a GL extract lacks the classification column, its rows will show up as exceptions rather than being auto-classified by guesswork.
+- Matching invoices to GL lines relies on date, amount and reference number/vendor being reasonably consistent between the two; if your GL uses a very different reference scheme than the invoices, more items may land in the exceptions list than expected.
+- The updated FAR file becomes the new baseline for the next period automatically — you don't re-upload the baseline each time.
+- "Reasonable validation" means the checks listed in Rule 9 above; it does not include a full audit-style review of every accounting entry.
 
 ## Not included
-- The tool does not generate journal entries or post anything back to your accounting system — it only produces the updated FAR file.
-- It does not reconcile FAR totals against your audited financial statements or trial balance; any pre-existing mismatches in the baseline FAR (e.g. rate differences noted in your current file) are carried forward as-is, not corrected.
-- It does not handle asset revaluations, impairments, or transfers between asset classes — only additions and (where identifiable) disposals.
-- It does not manually correct misread invoice data on your behalf — misreads are flagged as exceptions for you to resolve.
-- It cannot create a new asset-class tab or column that doesn't already exist in your baseline FAR — a purchase that doesn't fit any existing tab is flagged as an exception, not force-fitted or auto-created.
+- No cloud-based OCR service — only local reading of invoice text/images.
+- No manual restructuring of the FAR, and no new asset classes, tabs, or depreciation policies created by the tool — it only follows what's already in your uploaded FAR.
+- No automatic resolution of exceptions — flagged items always need your review and manual entry.
+- No handling of GL files that don't include a classification/account column — those rows will always be flagged, not guessed.
 
 ## How you will know it works
-- Upload your current FAR as baseline, then run one period with a small batch of invoices and GL you already know the answer for — check that the new rows appear in the correct tabs with the correct amounts and dates, and that prior-year figures haven't changed.
-- Deliberately include one invoice with no matching GL line and one GL line with no matching invoice — confirm both land on the Exceptions tab with a sensible reason instead of appearing in the FAR.
-- Re-run the same period's invoices and GL a second time — confirm no duplicate rows are added.
-- Check a newly added asset's depreciation for its purchase month — confirm it shows a full month's charge regardless of the exact purchase date.
-- If you include a disposal in the GL, confirm the existing asset row is updated (not duplicated) and depreciation stops the month before disposal, with nothing charged in the disposal month itself.
+- Upload your current FAR as baseline, then a period's invoices (including at least one photographed/scanned invoice) and GL — the image invoice should be read without the "Tesseract not installed" error.
+- Check that new assets appear in the correct existing tab, with the same columns and formulas as the rest of that tab.
+- Check that a known disposal in your test GL stops depreciation the month before disposal, and a known new purchase starts depreciation in its purchase month.
+- Re-run the same invoices/GL a second time and confirm nothing is added twice.
+- Include one deliberately blurry or unreadable invoice image and confirm it shows up in the exceptions list instead of blocking the rest of the upload.
