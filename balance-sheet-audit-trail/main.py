@@ -2,6 +2,7 @@ import csv
 import io
 import os
 import uuid
+from datetime import datetime
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
@@ -10,6 +11,7 @@ import openpyxl
 
 import parser as wbparser
 import matching
+import odoo_source
 
 app = FastAPI(title="Balance Sheet Audit Support")
 
@@ -53,6 +55,7 @@ async def upload(file: UploadFile = File(...)):
         "workbook_bytes": data,
         "manual_overrides": {},
         "tolerance": 1.0,
+        "source_label": f"Excel upload, files uploaded {datetime.utcnow().strftime('%d %b %Y')}",
     }
 
     return {
@@ -112,7 +115,42 @@ async def analyze(
     report = matching.compute_report(sofp_items, tb_accounts, gl_accounts, tolerance, {})
     return {
         "sofp_meta": sofp_meta, "tb_meta": tb_meta, "gl_meta": gl_meta,
-        "report": report,
+        "report": report, "source_label": session["source_label"],
+    }
+
+
+@app.post("/api/odoo/pull")
+async def odoo_pull(start_date: str = Form(...), end_date: str = Form(...), tolerance: float = Form(1.0)):
+    """Alternative to /api/upload + /api/analyze: pulls posted SOFP/TB/GL
+    data for a period straight from Odoo (see odoo_source.py) instead of
+    reading it from an uploaded workbook, then runs the same reconciliation.
+    """
+    try:
+        pulled = odoo_source.pull_period(start_date, end_date)
+    except odoo_source.OdooEmptyPeriodError as e:
+        return _err(str(e), 422)
+    except odoo_source.OdooError as e:
+        return _err(str(e), 502)
+
+    session_id = uuid.uuid4().hex
+    source_label = f"Odoo, {pulled['period_label']}"
+    session = {
+        "manual_overrides": {},
+        "tolerance": tolerance,
+        "source_label": source_label,
+        "sofp_items": pulled["sofp_items"], "sofp_meta": pulled["sofp_meta"],
+        "tb_accounts": pulled["tb_accounts"], "tb_meta": pulled["tb_meta"],
+        "gl_accounts": pulled["gl_accounts"], "gl_meta": pulled["gl_meta"],
+    }
+    SESSIONS[session_id] = session
+
+    report = matching.compute_report(
+        session["sofp_items"], session["tb_accounts"], session["gl_accounts"], tolerance, {}
+    )
+    return {
+        "session_id": session_id,
+        "sofp_meta": session["sofp_meta"], "tb_meta": session["tb_meta"], "gl_meta": session["gl_meta"],
+        "report": report, "source_label": source_label,
     }
 
 
@@ -181,6 +219,8 @@ async def export_summary(session_id: str):
 
     buf = io.StringIO()
     w = csv.writer(buf)
+    w.writerow([f"Source: {session.get('source_label', 'unknown')}"])
+    w.writerow([])
     w.writerow([
         "SOFP Line", "SOFP Reported Value", "TB Account", "TB Code", "TB Closing Balance",
         "GL Account", "GL Closing Balance", "GL Transaction Count",
@@ -228,6 +268,8 @@ async def export_gl_detail(session_id: str):
 
     buf = io.StringIO()
     w = csv.writer(buf)
+    w.writerow([f"Source: {session.get('source_label', 'unknown')}"])
+    w.writerow([])
     w.writerow([
         "SOFP Line", "TB Account", "GL Account", "Transaction Date", "Description",
         "Debit", "Credit", "Running Balance (as stated in GL)",

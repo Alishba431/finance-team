@@ -36,6 +36,23 @@ function fmt(n) {
   return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ---------- Step 1: data source choice ----------
+
+function applySourceChoice() {
+  const isOdoo = $("source-odoo").checked;
+  $("upload-section").classList.toggle("hidden", isOdoo);
+  $("odoo-section").classList.toggle("hidden", !isOdoo);
+  // Switching source starts a fresh run.
+  $("config-section").classList.add("hidden");
+  $("report-section").classList.add("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  $("source-excel").addEventListener("change", applySourceChoice);
+  $("source-odoo").addEventListener("change", applySourceChoice);
+  applySourceChoice();
+});
+
 function showError(elId, msg) {
   const el = $(elId);
   el.textContent = msg;
@@ -128,7 +145,41 @@ $("analyze-btn").addEventListener("click", async () => {
   }
 });
 
+// ---------- Step 2 (Odoo path): pull & analyze in one step ----------
+
+$("odoo-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  clearError("odoo-error");
+  const fd = new FormData();
+  fd.append("start_date", $("odoo-start").value);
+  fd.append("end_date", $("odoo-end").value);
+  fd.append("tolerance", $("odoo-tolerance").value || "1");
+
+  const btn = e.target.querySelector("button");
+  btn.disabled = true;
+  btn.textContent = "Pulling from Odoo...";
+  try {
+    const res = await fetch("/api/odoo/pull", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      showError("odoo-error", data.error || "Could not pull data from Odoo.");
+      return;
+    }
+    SESSION_ID = data.session_id;
+    $("config-section").classList.add("hidden");
+    renderMeta(data);
+    renderReport(data.report);
+    $("report-section").classList.remove("hidden");
+  } catch (err) {
+    showError("odoo-error", "Could not reach the server: " + err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Pull from Odoo & run reconciliation";
+  }
+});
+
 function renderMeta(data) {
+  $("source-line").textContent = `Source: ${data.source_label || "unknown"}`;
   const m = data.sofp_meta;
   $("meta-note").textContent =
     `Using the ${m.current_year} column on the SOFP sheet as the reported closing balance ` +

@@ -2,11 +2,11 @@
   "slug": "balance-sheet-audit-trail",
   "system_id": "balance-sheet-audit-trail",
   "title": "Balance Sheet Audit Trail",
-  "summary": "Upload a workbook with SOFP, Trial Balance and General Ledger sheets and get a line-by-line audit trail showing how each Statement of Financial Position figure ties back to its supporting TB accounts and GL transactions, with unmapped accounts flagged for you to assign.",
-  "prompt": "dark mode integration",
-  "version": 3,
+  "summary": "Traces every line on the Statement of Financial Position back to its supporting Trial Balance accounts and General Ledger transactions, flagging anything that doesn't reconcile. Data can come from an Excel upload (SOFP/TB/GL) or a direct read-only pull from the connected staging Odoo instance for a chosen date range.",
+  "prompt": "in addition to uploading SOFP, TB and GL as Excel files, also add an option pull that data directly from Odoo.",
+  "version": 4,
   "created_at": "2026-07-30T17:51:16.544197+00:00",
-  "updated_at": "2026-07-31T11:00:24.804353+00:00",
+  "updated_at": "2026-09-02T04:32:26.673681+00:00",
   "run": {
     "install": [
       "pip install -r requirements.txt"
@@ -16,18 +16,22 @@
     "health_path": "/"
   },
   "assumptions": [
-    "The SOFP sheet has a row of year headers and uses the most recent year's column as the reported closing balance",
-    "The TB sheet has Debit/Credit columns (or a single Closing Balance column); when several Debit/Credit pairs exist, the one labelled End/Closing is used",
-    "The GL sheet has one block per account: an account-name row, an optional Initial Balance row, then Date/Debit/Credit/Balance transaction rows",
-    "Automatic TB-to-SOFP-line and GL-to-TB-account matching is a starting suggestion based on name similarity and common accounting terms, not guaranteed to be fully correct",
-    "Nothing is persisted to disk; uploaded workbooks and reconciliation state live only in server memory for the running process"
+    "The Excel upload path, its expected file layout, and the reconciliation logic are unchanged from the previous version.",
+    "'Pull from Odoo' reads the standard Accounting module records (account.move, account.move.line, account.account) on the staging instance already connected to this tool via environment variables \u2014 not a custom module.",
+    "Only posted (validated) Odoo journal entries are included; draft/unposted entries are excluded, matching a finalized Excel export.",
+    "One company, one period per Odoo pull; no multi-company consolidation and no period-over-period comparison in a single run.",
+    "The Odoo pull is read-only: nothing is written back to Odoo.",
+    "Odoo doesn't export a formatted Statement of Financial Position, so SOFP 'lines' pulled from Odoo are built by grouping account balances under Odoo's own account_type categories (e.g. Cash and Cash Equivalents, Trade and Other Payables) rather than reproducing your organization's exact statement captions.",
+    "Uploaded workbooks and pulled Odoo data live only in server memory for the running process; restarting the app clears all sessions, and nothing from Odoo is cached between runs."
   ],
   "gaps": [
-    "Note-linked disclosures (separate note sheets referenced by a Note column on the SOFP) are not cross-referenced automatically",
-    "Sign-convention mismatches are flagged, not auto-corrected, since the correct convention can't be inferred reliably from the data alone"
+    "If ODOO_URL/ODOO_DB/ODOO_USERNAME/ODOO_API_KEY aren't set on the server, the 'Pull from Odoo' option will report a clear configuration error and only the Excel upload path will work.",
+    "Note-linked disclosures (separate note sheets referenced by a Note column) are not cross-referenced automatically for either source.",
+    "Sign-convention differences between systems are flagged as a likely mismatch rather than silently corrected."
   ],
   "expects": [
-    "An Excel workbook (.xlsx or .xlsm) containing a Statement of Financial Position (SOFP) sheet, a Trial Balance (TB) sheet, and a General Ledger (GL) sheet with one transaction block per account"
+    "Either: the three Excel sheets (.xlsx/.xlsm) \u2014 Statement of Financial Position (SOFP), Trial Balance (TB) and General Ledger (GL) \u2014 in the same layout the tool already expects",
+    "Or: a start and end date for a period to pull directly from the connected staging Odoo instance (requires ODOO_URL/ODOO_DB/ODOO_USERNAME/ODOO_API_KEY to be set on the server; no credentials are entered in the browser)"
   ],
   "history": [
     {
@@ -47,6 +51,12 @@
       "prompt": "dark mode integration",
       "build_id": "b_f8fab9505d",
       "at": "2026-07-31T11:00:24.804353+00:00"
+    },
+    {
+      "version": 4,
+      "prompt": "in addition to uploading SOFP, TB and GL as Excel files, also add an option pull that data directly from Odoo.",
+      "build_id": "b_b82469fa67",
+      "at": "2026-09-02T04:32:26.673681+00:00"
     }
   ]
 }

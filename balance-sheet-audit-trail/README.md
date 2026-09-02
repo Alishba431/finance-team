@@ -8,6 +8,13 @@ so no one has to scroll through the whole GL by hand.
 
 ## What it does
 
+0. **Choose a data source**, fresh each time you run the tool: upload the
+   same three Excel files as always, or pull the same data straight from
+   Odoo for a period you specify. Whichever you pick, the audit trail is
+   built and shown exactly the same way — the report always opens with a
+   "Source: ..." line so anyone reviewing it later knows where the numbers
+   came from (e.g. "Source: Odoo, 01 Aug 2026 – 31 Aug 2026" or "Source:
+   Excel upload, files uploaded 02 Sep 2026").
 1. **Upload** an `.xlsx`/`.xlsm` workbook. Nothing is written to disk — the
    file is held in server memory only for as long as the process runs / the
    session is used.
@@ -46,6 +53,37 @@ so no one has to scroll through the whole GL by hand.
    theme (it remembers your choice for next time via the browser's local
    storage, and defaults to your OS preference on first visit).
 
+## Pulling from Odoo instead of uploading
+
+Choosing "Pull from Odoo" and giving a start/end date pulls posted
+(validated) journal entries directly from `account.move.line` /
+`account.account` for that period via Odoo's standard read-only XML-RPC
+API (`odoo_source.py` — no extra Python package needed, `xmlrpc.client` is
+part of the standard library), reshapes them into the same row/column
+structures the Excel parser produces, and runs the identical reconciliation.
+No file, login or API key is entered in the browser for this path.
+
+This requires the server the tool runs on to have the Odoo connection
+configured via environment variables (these are never accepted from the
+browser and are not settable from the UI):
+
+| Variable          | Required | Meaning                                             |
+|-------------------|----------|------------------------------------------------------|
+| `ODOO_URL`        | yes      | Base URL of the staging Odoo instance                |
+| `ODOO_DB`         | yes      | Odoo database name                                   |
+| `ODOO_USERNAME`   | yes      | Login used to authenticate                           |
+| `ODOO_API_KEY`    | yes      | Odoo API key (used as the XML-RPC password)          |
+| `ODOO_COMPANY_ID` | no       | Restrict the pull to one company id, if the instance has more than one |
+
+If these aren't set, the "Pull from Odoo" option returns a clear error and
+tells you to use the Excel upload option instead; it never falls back to
+asking for files mid-run. If Odoo has no posted entries for the period you
+gave it, the tool stops and tells you the period was empty instead of
+producing a report. Only posted entries are ever included — drafts are
+left out, the same way a finalized Excel export would be — and each run
+pulls fresh data at that moment; nothing from Odoo is cached or reused
+between runs.
+
 ## Running it
 
 ```
@@ -54,10 +92,10 @@ python main.py
 ```
 
 The app serves on `http://localhost:8000` (or on the port given in the
-`PORT` environment variable). Open it in a browser, upload a workbook, and
-follow the on-screen steps. With no file uploaded yet, the home page shows
-the upload form and nothing else — there is no sample or seed data bundled
-with the tool.
+`PORT` environment variable). Open it in a browser, choose a data source
+(Excel upload or Odoo pull), and follow the on-screen steps. With no data
+provided yet, the home page shows the source choice and upload form and
+nothing else — there is no sample or seed data bundled with the tool.
 
 ## Notes, assumptions and known gaps
 
@@ -90,3 +128,18 @@ with the tool.
 - Formula errors in the source workbook (e.g. `#REF!`) are surfaced as an
   explicit flag on the affected SOFP line rather than treated as zero or
   skipped.
+- **Odoo SOFP line items are generic groupings, not a formatted statement.**
+  Odoo doesn't export a laid-out Statement of Financial Position by default,
+  so the Odoo pull builds SOFP "lines" by summing account closing balances
+  grouped by Odoo's own `account_type` field (e.g. "Cash and Cash
+  Equivalents", "Trade and Other Payables"). These labels may not match your
+  organization's actual SOFP captions word-for-word; the existing
+  name/concept-similarity matching still applies on top of them.
+- Only **posted** journal entries are ever pulled from Odoo; income/expense
+  and off-balance accounts are pulled into the Trial Balance/General Ledger
+  like any other account but are not summed into an SOFP line (a balance
+  sheet doesn't report them) — they will show up as "unmapped TB accounts",
+  same as an Excel TB with extra accounts would.
+- The Odoo pull is single-company, single-period, read-only, and one-shot —
+  no consolidation, no period-over-period comparison, and nothing is written
+  back to Odoo.

@@ -17,8 +17,21 @@
 
 <main>
 
+  <section id="source-section" class="card">
+    <h2>1. Choose your data source</h2>
+    <p class="hint">
+      Pick one source for this run &mdash; upload the same three Excel files as always,
+      or pull posted entries directly from Odoo for a period. Whichever you choose,
+      the audit trail below is built and checked exactly the same way.
+    </p>
+    <div class="source-choice">
+      <label><input type="radio" name="source" id="source-excel" value="excel" checked /> Upload Excel files</label>
+      <label><input type="radio" name="source" id="source-odoo" value="odoo" /> Pull from Odoo</label>
+    </div>
+  </section>
+
   <section id="upload-section" class="card">
-    <h2>1. Upload the workbook</h2>
+    <h2>2. Upload the workbook</h2>
     <p class="hint">
       Upload the Excel workbook containing the Statement of Financial Position (SOFP),
       Trial Balance (TB) and General Ledger (GL) sheets. Nothing is stored beyond this
@@ -31,8 +44,34 @@
     <div id="upload-error" class="error hidden"></div>
   </section>
 
+  <section id="odoo-section" class="card hidden">
+    <h2>2. Pull from Odoo</h2>
+    <p class="hint">
+      Give the reporting period (e.g. one calendar month). The tool connects to the
+      staging Odoo instance using the connection already configured for it &mdash; no
+      login or API key is needed here. Only posted (validated) journal entries are
+      included; drafts are left out. If Odoo has no posted entries for the period,
+      you'll be told rather than shown an empty or misleading report.
+    </p>
+    <form id="odoo-form">
+      <div class="config-grid">
+        <label>Start date
+          <input type="date" id="odoo-start" required />
+        </label>
+        <label>End date
+          <input type="date" id="odoo-end" required />
+        </label>
+        <label>Materiality tolerance
+          <input type="number" id="odoo-tolerance" value="1" step="0.01" />
+        </label>
+      </div>
+      <button type="submit">Pull from Odoo &amp; run reconciliation</button>
+    </form>
+    <div id="odoo-error" class="error hidden"></div>
+  </section>
+
   <section id="config-section" class="card hidden">
-    <h2>2. Confirm the sheets</h2>
+    <h2>3. Confirm the sheets</h2>
     <p class="hint">These were guessed from the sheet names in your workbook &mdash; change any that are wrong before running the reconciliation.</p>
     <div class="config-grid">
       <label>SOFP sheet
@@ -53,8 +92,9 @@
   </section>
 
   <section id="report-section" class="card hidden">
-    <h2>3. Audit report</h2>
+    <h2>4. Audit report</h2>
 
+    <div id="source-line" class="source-line"></div>
     <div id="meta-note" class="hint"></div>
 
     <div id="summary-cards" class="summary-cards"></div>
