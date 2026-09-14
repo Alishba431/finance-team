@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Subscription Invoice Fetcher</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 780px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+  h1 { font-size: 1.5rem; }
+  .card { border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .status-ok { color: #157347; font-weight: 600; }
+  .status-bad { color: #b02a37; font-weight: 600; }
+  button, input[type=submit] { background: #1a73e8; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+  td, th { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 0.9rem; }
+  .muted { color: #666; font-size: 0.9rem; }
+  .error { background: #fdecea; border: 1px solid #f5c2c7; padding: 12px; border-radius: 8px; color: #842029; margin-bottom: 16px; }
+  a.download { display: inline-block; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Subscription Invoice Fetcher</h1>
+<p class="muted">Matches each row of your invoice breakdown sheet to the invoice email in the admin Gmail inbox, and links the saved attachment.</p>
+
+{% if error %}
+<div class="error">{{ error }}</div>
+{% endif %}
+
+<div class="card">
+  <h2>1. Admin Gmail access</h2>
+  {% if not oauth_configured %}
+    <p class="status-bad">Not configured.</p>
+    <p class="muted">Set the <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> environment variables (from a Google Cloud OAuth 2.0 "Web application" client) before this feature can be used, and add
+      <code>{{ redirect_uri }}</code> to that client's Authorized redirect URIs.</p>
+  {% elif connected %}
+    <p class="status-ok">Connected — the tool can read the admin inbox.</p>
+    <form method="post" action="/auth/gmail/disconnect">
+      <button type="submit">Disconnect</button>
+    </form>
+  {% else %}
+    <p class="status-bad">Not connected.</p>
+    <a href="/auth/gmail/start"><button type="button" onclick="window.location='/auth/gmail/start'">Connect Gmail (admin sign-in)</button></a>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>2. Upload the invoice breakdown sheet</h2>
+  <p class="muted">Excel file (.xlsx) with one row per enterprise/breakdown line, containing at least an enterprise name, a breakdown/description, an invoice date, and an amount column.</p>
+  <form method="post" action="/process" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".xlsx" required>
+    <br><br>
+    <input type="submit" value="Run" {{ 'disabled' if not connected else '' }}>
+  </form>
+</div>
+
+{% if result %}
+<div class="card">
+  <h2>Result</h2>
+  <p>{{ result.total_rows }} rows processed.</p>
+  <ul>
+    <li>Found (Attachment): {{ result.counts['Found (Attachment)'] }}</li>
+    <li>Found — No Attachment (Review): {{ result.counts['Found — No Attachment (Review)'] }}</li>
+    <li>Not Found: {{ result.counts['Not Found'] }}</li>
+    <li>Missing Data: {{ result.counts['Missing Data'] }}</li>
+  </ul>
+  {% if result.missing_columns %}
+  <p class="status-bad">Could not find a column for: {{ result.missing_columns|join(', ') }}. Every row was marked Missing Data.</p>
+  {% endif %}
+  <a class="download" href="/download/{{ result.run_id }}"><button type="button">Download result sheet</button></a>
+</div>
+{% endif %}
+
+<p class="muted">See SPEC.md in the project folder for the full approved specification and its assumptions/limits.</p>
+</body>
+</html>

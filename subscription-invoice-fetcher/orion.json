@@ -1,0 +1,46 @@
+{
+  "slug": "subscription-invoice-fetcher",
+  "system_id": "subscription-invoice-fetcher",
+  "title": "Subscription Invoice Fetcher",
+  "summary": "Upload your subscription invoice breakdown sheet, connect the admin Gmail inbox once, and get back the same sheet with a Status per row (Found, Found - No Attachment, Not Found, or Missing Data) plus a link to the saved invoice attachment for anything the tool located automatically.",
+  "prompt": "I have attached a template subscription invoice. Across every enterprise there is a breakdown against every break down i want the invoice gotten from the admin email around that date. The feature shall take admin account access and the invoice sheet and get invoices from the gmail against every break down.",
+  "version": 1,
+  "created_at": "2026-09-14T16:27:10.357938+00:00",
+  "updated_at": "2026-09-14T16:27:10.357938+00:00",
+  "run": {
+    "install": [
+      "pip install -r requirements.txt"
+    ],
+    "start": "python -m app.main",
+    "port": 8000,
+    "health_path": "/"
+  },
+  "assumptions": [
+    "Admin email means one specific Gmail inbox, authorized once and reused across runs",
+    "Matching is by enterprise name text plus amount (rounding tolerance ~1 unit), not by any reference number",
+    "Each row is one billing period for one enterprise; the sheet is re-uploaded fresh each cycle",
+    "A sheet cell can't hold a PDF, so 'invoice in the sheet' means a hyperlink to the saved attachment file"
+  ],
+  "gaps": [
+    "The originally attached subcription_invoice.tsv could not be read (unsupported/binary format) \u2014 column detection is based on common header wording (enterprise/client/company, breakdown/description, date, amount); if the real sheet uses very different headers, columns may not be auto-detected and rows will show as Missing Data",
+    "No verification of the PDF attachment's actual contents against the row \u2014 only the email's sender/subject/body text and stated amount are checked, per the approved spec",
+    "No automatic emailing, reminders, or escalation for Not Found rows",
+    "No connection to Odoo or any accounting system \u2014 this tool only reads the uploaded sheet and the one authorized Gmail inbox"
+  ],
+  "expects": [
+    "The invoice breakdown sheet as a real .xlsx file with enterprise name, breakdown/description, invoice date, and amount columns",
+    "A one-time admin sign-in to the Gmail inbox that receives these invoices (read-only access)",
+    "A Google Cloud OAuth client (GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET env vars) set up in advance so the sign-in button works"
+  ],
+  "history": [
+    {
+      "version": 1,
+      "prompt": "I have attached a template subscription invoice. Across every enterprise there is a breakdown against every break down i want the invoice gotten from the admin email around that date. The feature shall take admin account access and the invoice sheet and get invoices from the gmail against every break down.",
+      "build_id": "b_204a1eb1a7",
+      "at": "2026-09-14T16:27:10.357938+00:00"
+    }
+  ],
+  "capabilities": [
+    "browser"
+  ]
+}
