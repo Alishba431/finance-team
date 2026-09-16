@@ -2,11 +2,11 @@
   "slug": "subscription-invoice-fetcher",
   "system_id": "subscription-invoice-fetcher",
   "title": "Subscription Invoice Fetcher",
-  "summary": "Matches each row of a subscription/invoice breakdown sheet to the matching invoice email in an admin Gmail inbox, saves the attachment, and returns the sheet with a Status column and a link to each found invoice. It now finds the real header row even when a title/section label sits above it, and prefers whichever same-named column (e.g. two 'amount' columns) actually has real values when the sheet has ambiguous column names.",
-  "prompt": "Every row is coming back as Missing Data on a real sheet. The cause: the sheet has a title/section label in row 1 (e.g. '20001  Software Subscriptions - Engineering') and the ACTUAL column headers are in row 2 (Sr No, Voucher Number, Invoice Date, Communication / Breakdown, Partner (Vendor), Debit, Breakup Amounts, Amount in dollars, Enterprise, Test Case (reference only)). The code currently does pd.read_excel(input_path) with no header row detection, so it always treats row 1 as the header \u2014 which is wrong here, so no column ever matches and every row is marked Missing Data. Fix: instead of assuming row 1 is the header, scan the first several rows (e.g. first 10) for the row that actually looks like a header \u2014 the one containing the most recognizable column-name keywords (enterprise/client/company/vendor, breakdown/description/communication, date, amount) \u2014 and use that row as the real header, skipping any title/label rows above it. Keep everything else the same (still uses the 'Enterprise' column for enterprise name, a breakdown/description column, an invoice date column, and an amount column).",
-  "version": 4,
+  "summary": "Upload your subscription/invoice breakdown sheet and it searches your Gmail inbox for a matching invoice email for each row, using the vendor/partner name (not the internal department name) to search, and gives you back a report showing which invoices were found, with a live row-by-row progress indicator while it runs.",
+  "prompt": "Zero invoices are being matched even though the real invoice emails are sitting right there in the inbox. Root cause: the sheet has TWO different columns that both currently get treated as one \u2014 Enterprise (an internal department/cost-center label, e.g. Engineering, Admin) and Partner (Vendor) (the actual company that sent the invoice, e.g. Microsoft, Obsidian.md, Zoom). The tool is currently searching Gmail for the Enterprise value (Engineering) as the sender/company name, but Engineering is an internal department name that will never appear in any real invoice email \u2014 the vendor name (Microsoft, Zoom, etc) is what actually appears in the email sender/subject/body, and that value lives in a separate Partner (Vendor) column the tool ignores. Fix: detect a distinct vendor/partner column (keywords like vendor, partner, supplier \u2014 separate from the existing enterprise/client/company keyword group) and use THAT column'\\''s value to match against the email sender/subject/body, not the enterprise/department column. Keep the enterprise/department column for display in the output report as before, just stop using it as the email-matching key. If no separate vendor/partner column exists in a given sheet, fall back to using the enterprise column for matching same as today, so sheets without this distinction still work. Separately: the tool shows a plain '\\''Loading'\\'' message with no progress while it works through all the rows, which can take a while against a large inbox \u2014 add a simple progress indicator (e.g. '\\''Processing row 3 of 24...'\\'') so it does not look stuck.",
+  "version": 5,
   "created_at": "2026-09-14T16:27:10.357938+00:00",
-  "updated_at": "2026-09-16T17:09:55.355429+00:00",
+  "updated_at": "2026-09-16T17:38:03.147582+00:00",
   "run": {
     "install": [
       "pip install -r requirements.txt"
@@ -16,19 +16,18 @@
     "health_path": "/"
   },
   "assumptions": [
-    "The real header row is always within the first 10 rows of the sheet, never further down",
-    "Each sheet has one header row, not headers split across two rows",
-    "When more than one column name matches a field's keywords (e.g. 'Breakup Amounts' and 'Amount in dollars'), the column with the most populated/parseable values in that data is the real one to use",
-    "A sheet with no row resembling a header anywhere in the first 10 rows is reported as unreadable rather than guessed at"
+    "A 'vendor/partner column' is any column whose header contains vendor, partner, or supplier - kept distinct from the enterprise/client/company/customer/organisation keyword group",
+    "Matching is a plain text search of the vendor value (or enterprise value, as fallback) against the email sender, subject, and body - not fuzzy/alias matching",
+    "The progress indicator is a simple text line updated per row via polling, not a graphical progress bar",
+    "All other matching, date, and amount logic is unchanged from the previous version"
   ],
   "gaps": [
-    "No way to manually pick the header row if the automatic guess is wrong on a particular sheet",
-    "Sheets whose column names contain none of the recognized keywords are reported as unreadable, not processed by guesswork",
-    "Headers split across two separate rows are not supported"
+    "No fuzzy/alias matching - a sheet vendor name that doesn't match the wording used in the actual invoice email (e.g. sheet says AWS but the email is from Amazon Web Services) will still show as not found",
+    "Nothing is written back to the uploaded sheet - the enterprise/vendor distinction is used internally only"
   ],
   "expects": [
-    "The invoice breakdown sheet as a real .xlsx file, with a header row somewhere in its first 10 rows containing recognizable names for enterprise/client/company/vendor, a breakdown/description/communication column, an invoice date, and an amount",
-    "A Gmail App Password for the admin inbox (16 characters, spaces from Google's display are stripped automatically)"
+    "The invoice breakdown sheet as a .xlsx file, with a header row somewhere in the first 10 rows containing columns for enterprise/department, (ideally) a separate vendor/partner/supplier column, a breakdown/description, an invoice date, and an amount",
+    "A Gmail App Password for the admin inbox to search (generated at Google Account -> Security -> 2-Step Verification -> App Passwords), entered fresh each run"
   ],
   "history": [
     {
@@ -54,6 +53,12 @@
       "prompt": "Every row is coming back as Missing Data on a real sheet. The cause: the sheet has a title/section label in row 1 (e.g. '20001  Software Subscriptions - Engineering') and the ACTUAL column headers are in row 2 (Sr No, Voucher Number, Invoice Date, Communication / Breakdown, Partner (Vendor), Debit, Breakup Amounts, Amount in dollars, Enterprise, Test Case (reference only)). The code currently does pd.read_excel(input_path) with no header row detection, so it always treats row 1 as the header \u2014 which is wrong here, so no column ever matches and every row is marked Missing Data. Fix: instead of assuming row 1 is the header, scan the first several rows (e.g. first 10) for the row that actually looks like a header \u2014 the one containing the most recognizable column-name keywords (enterprise/client/company/vendor, breakdown/description/communication, date, amount) \u2014 and use that row as the real header, skipping any title/label rows above it. Keep everything else the same (still uses the 'Enterprise' column for enterprise name, a breakdown/description column, an invoice date column, and an amount column).",
       "build_id": "b_4050d77c02",
       "at": "2026-09-16T17:09:55.355429+00:00"
+    },
+    {
+      "version": 5,
+      "prompt": "Zero invoices are being matched even though the real invoice emails are sitting right there in the inbox. Root cause: the sheet has TWO different columns that both currently get treated as one \u2014 Enterprise (an internal department/cost-center label, e.g. Engineering, Admin) and Partner (Vendor) (the actual company that sent the invoice, e.g. Microsoft, Obsidian.md, Zoom). The tool is currently searching Gmail for the Enterprise value (Engineering) as the sender/company name, but Engineering is an internal department name that will never appear in any real invoice email \u2014 the vendor name (Microsoft, Zoom, etc) is what actually appears in the email sender/subject/body, and that value lives in a separate Partner (Vendor) column the tool ignores. Fix: detect a distinct vendor/partner column (keywords like vendor, partner, supplier \u2014 separate from the existing enterprise/client/company keyword group) and use THAT column'\\''s value to match against the email sender/subject/body, not the enterprise/department column. Keep the enterprise/department column for display in the output report as before, just stop using it as the email-matching key. If no separate vendor/partner column exists in a given sheet, fall back to using the enterprise column for matching same as today, so sheets without this distinction still work. Separately: the tool shows a plain '\\''Loading'\\'' message with no progress while it works through all the rows, which can take a while against a large inbox \u2014 add a simple progress indicator (e.g. '\\''Processing row 3 of 24...'\\'') so it does not look stuck.",
+      "build_id": "b_f3e8ec5f04",
+      "at": "2026-09-16T17:38:03.147582+00:00"
     }
   ],
   "capabilities": [

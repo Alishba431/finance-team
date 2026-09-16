@@ -14,7 +14,8 @@ from . import gmail_search
 REQUIRED_FIELDS = ["enterprise", "date", "amount"]
 
 COLUMN_KEYWORDS = {
-    "enterprise": ["enterprise", "client", "company", "customer", "vendor", "organisation", "organization"],
+    "enterprise": ["enterprise", "client", "company", "customer", "organisation", "organization"],
+    "vendor": ["vendor", "partner", "supplier"],
     "breakdown": ["breakdown", "description", "communication", "line item", "item", "particular"],
     "date": ["date"],
     "amount": ["amount", "total", "value"],
@@ -126,10 +127,14 @@ def _safe_filename(text):
 
 
 def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
-                      base_url: str, run_id: str, imap_conn):
+                      base_url: str, run_id: str, imap_conn, progress_cb=None):
     """Runs the full match pipeline. `imap_conn` is a logged-in IMAP4_SSL
     connection to the admin Gmail inbox (may be None to test column
-    detection without touching Gmail; not used in normal operation)."""
+    detection without touching Gmail; not used in normal operation).
+
+    `progress_cb`, if given, is called as progress_cb(current_row, total_rows)
+    before each row is processed, so callers can surface a live "Processing
+    row N of M..." indicator instead of a static loading message."""
     header_row = find_header_row(input_path)
     if header_row is None:
         return {
@@ -157,7 +162,18 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
 
     counts = {STATUS_FOUND: 0, STATUS_REVIEW: 0, STATUS_NOT_FOUND: 0, STATUS_MISSING: 0}
 
+    # A separate vendor/partner column - the company that actually sent the
+    # invoice - is what should be searched for in Gmail. The enterprise
+    # column (internal department/cost-center) stays in the output for
+    # display only. Sheets with no separate vendor column fall back to
+    # matching on the enterprise column, same as before this change.
+    vendor_col = columns.get("vendor")
+    match_col = vendor_col if vendor_col is not None else columns["enterprise"]
+
+    total_rows = len(df)
     for idx, row in df.iterrows():
+        if progress_cb:
+            progress_cb(idx + 1, total_rows)
         row_values = list(row)
         status = None
         link_url = None
@@ -166,24 +182,28 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
             status = STATUS_MISSING
         else:
             enterprise_name = row.get(columns["enterprise"])
+            match_name = row.get(match_col)
             amount = _parse_amount(row.get(columns["amount"]))
             invoice_date = _parse_date(row.get(columns["date"]))
 
-            if (not enterprise_name or (isinstance(enterprise_name, float) and pd.isna(enterprise_name))
+            def _blank(value):
+                return not value or (isinstance(value, float) and pd.isna(value))
+
+            if (_blank(enterprise_name) or _blank(match_name)
                     or amount is None or invoice_date is None):
                 status = STATUS_MISSING
             else:
                 start = invoice_date - timedelta(days=7)
                 end = invoice_date + timedelta(days=7)
                 candidates = gmail_search.fetch_candidates(imap_conn, start, end)
-                match_status, candidate = gmail_search.find_best_match(candidates, str(enterprise_name), amount)
+                match_status, candidate = gmail_search.find_best_match(candidates, str(match_name), amount)
 
                 if match_status == "found":
                     attachment = candidate["attachments"][0]
                     raw = gmail_search.download_attachment(imap_conn, candidate["uid"], attachment)
                     ext = Path(attachment["filename"]).suffix or (
                         ".pdf" if "pdf" in attachment["mimeType"] else ".bin")
-                    fname = f"{_safe_filename(enterprise_name)}_{invoice_date.isoformat()}_{idx}{ext}"
+                    fname = f"{_safe_filename(match_name)}_{invoice_date.isoformat()}_{idx}{ext}"
                     (attachments_dir / fname).write_bytes(raw)
                     status = STATUS_FOUND
                     link_url = f"{base_url.rstrip('/')}/attachments/{run_id}/{fname}"

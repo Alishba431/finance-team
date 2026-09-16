@@ -35,7 +35,7 @@
     Verification → App Passwords — a 16-character code you generate yourself, no developer setup needed), then
     upload the invoice breakdown sheet. Neither the email nor the app password is saved anywhere — you re-enter
     them every run, and the password field is cleared as soon as this page reloads.</p>
-  <form method="post" action="/process" enctype="multipart/form-data" autocomplete="off">
+  <form method="post" action="/process" enctype="multipart/form-data" autocomplete="off" id="process-form">
     <label for="admin_email">Admin Gmail address</label>
     <input type="email" id="admin_email" name="admin_email" required autocomplete="off">
 
@@ -45,17 +45,72 @@
 
     <label for="file">Invoice breakdown sheet (.xlsx)</label>
     <input type="file" id="file" name="file" accept=".xlsx" required>
+    <p class="muted" style="margin-top: 4px;">If your sheet has a "Partner (Vendor)" column, that vendor name is used to search Gmail; the Enterprise/department column is still shown in the report. Sheets with only an Enterprise column match on that instead, as before.</p>
+    <input type="hidden" id="progress_id" name="progress_id" value="">
 
     <br><br>
-    <input type="submit" value="Sign in and run">
+    <input type="submit" value="Sign in and run" id="submit-btn">
   </form>
+  <p class="muted" id="progress-line" style="display:none; margin-top: 10px;"></p>
 </div>
+
+<script>
+(function () {
+  var form = document.getElementById("process-form");
+  var progressLine = document.getElementById("progress-line");
+  var submitBtn = document.getElementById("submit-btn");
+  var progressIdField = document.getElementById("progress_id");
+
+  function makeId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "id-" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
+  }
+
+  form.addEventListener("submit", function (evt) {
+    evt.preventDefault();
+    var progressId = makeId();
+    progressIdField.value = progressId;
+
+    submitBtn.disabled = true;
+    submitBtn.value = "Working...";
+    progressLine.style.display = "block";
+    progressLine.textContent = "Signing in and reading the sheet...";
+
+    var poll = setInterval(function () {
+      fetch("/progress/" + progressId)
+        .then(function (r) { return r.json(); })
+        .then(function (p) {
+          if (p.total) {
+            progressLine.textContent = "Processing row " + p.current + " of " + p.total + "...";
+          }
+        })
+        .catch(function () {});
+    }, 800);
+
+    var formData = new FormData(form);
+    fetch("/process", { method: "POST", body: formData })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        clearInterval(poll);
+        document.open();
+        document.write(html);
+        document.close();
+      })
+      .catch(function () {
+        clearInterval(poll);
+        progressLine.textContent = "Something went wrong submitting the sheet. Please try again.";
+        submitBtn.disabled = false;
+        submitBtn.value = "Sign in and run";
+      });
+  });
+})();
+</script>
 
 {% if result %}
 <div class="card">
   <h2>Result</h2>
   {% if result.unreadable %}
-  <p class="status-bad">Sheet unreadable: no row in the first 10 rows looked like a column header (enterprise/client/company/vendor, breakdown/description, date, amount). Nothing was processed — check the sheet's headers and try again.</p>
+  <p class="status-bad">Sheet unreadable: no row in the first 10 rows looked like a column header (enterprise/client/company, vendor/partner/supplier, breakdown/description, date, amount). Nothing was processed — check the sheet's headers and try again.</p>
   {% else %}
   <p>{{ result.total_rows }} rows processed.</p>
   <ul>

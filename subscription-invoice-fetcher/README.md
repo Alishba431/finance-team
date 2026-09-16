@@ -19,8 +19,13 @@ running it.
    the tool's page each time you run it; nothing is saved between runs.
 
 2. **The invoice breakdown sheet**, as a real `.xlsx` file, with columns
-   (headers can vary in wording) for: enterprise/client name, a
-   breakdown/description, an invoice date, and an amount.
+   (headers can vary in wording) for: enterprise/client/department name, a
+   breakdown/description, an invoice date, and an amount. If the sheet also
+   has a separate vendor/partner column (e.g. "Partner (Vendor)"), the tool
+   searches Gmail using that vendor name instead of the enterprise/department
+   name, and still shows the enterprise/department name in the report. Sheets
+   without a separate vendor column match on the enterprise column, as
+   before.
 
 ## Install
 
