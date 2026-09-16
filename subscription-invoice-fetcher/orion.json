@@ -2,11 +2,11 @@
   "slug": "subscription-invoice-fetcher",
   "system_id": "subscription-invoice-fetcher",
   "title": "Subscription Invoice Fetcher",
-  "summary": "Matches each row of your invoice breakdown sheet to the matching invoice email in the admin Gmail inbox and gives you back a Status column plus a link to the saved attachment. You now sign in by typing the admin Gmail address and a Gmail App Password directly into the page instead of connecting through Google Cloud/OAuth.",
-  "prompt": "Replace the current Google OAuth sign-in flow (which needs a Cloud Console app, GMAIL_CLIENT_ID/GMAIL_CLIENT_SECRET, and a redirect URI set up in advance) with a plain input field in the tool's own web page instead: an email address field and a Gmail App Password field (the 16-character password anyone can generate themselves from Google Account -> Security -> 2-Step Verification -> App Passwords, no developer setup needed). Use these two values to connect to the admin Gmail inbox over IMAP instead of the Gmail API/OAuth, and search for the invoice emails the same way as before. The app password field must be a masked password input, must never be written to disk or logged, and should only be held in memory for the current run (the user re-enters it each time they run the tool, same as they re-upload the sheet).",
-  "version": 2,
+  "summary": "Matches each row of a subscription/invoice breakdown sheet to the matching invoice email in one admin Gmail inbox, saves the PDF/image attachment, and returns your sheet with a Status column and a link to the saved file next to each row. Signs in with just an email address and a Gmail App Password over IMAP.",
+  "prompt": "Sign-in is rejecting valid app passwords. The likely bug: Google displays the 16-character App Password with spaces every 4 characters for readability (e.g. 'abcd efgh ijkl mnop'), but the real password has no spaces. The current code only strips leading/trailing whitespace from the app_password field, not spaces in the middle, so a copy-pasted password with its original spacing gets sent to Gmail as-is and rejected. Fix: strip ALL whitespace from the app password (not just leading/trailing) before using it to sign in. Also update the on-page help text to mention that spaces in a pasted app password are fine and will be removed automatically.",
+  "version": 3,
   "created_at": "2026-09-14T16:27:10.357938+00:00",
-  "updated_at": "2026-09-16T12:03:29.395932+00:00",
+  "updated_at": "2026-09-16T16:50:07.523392+00:00",
   "run": {
     "install": [
       "pip install -r requirements.txt"
@@ -16,17 +16,14 @@
     "health_path": "/"
   },
   "assumptions": [
-    "The email address and app password are for the same admin Gmail inbox the tool already searched before this change - only the sign-in method changed, not which inbox is used",
-    "Whoever runs the tool generates the app password themselves beforehand; the tool does not walk through Google's app-password screen",
-    "2-Step Verification is enabled on the admin account outside this tool (a prerequisite for app passwords)",
-    "Matching logic (which emails count as a match, how the date window is chosen, output layout) is unchanged from the prior OAuth version, per the approved spec",
-    "Runs in an environment the user trusts - 'held in memory only' protects the app password from disk/log persistence, not from inspection of the running process's memory"
+    "Only spaces needed stripping from the App Password field before sign-in; the fix strips all whitespace (not just leading/trailing) so any stray tabs from a paste are removed too",
+    "The wording of the updated help text under the App Password field was not prescribed; a short plain sentence was written explaining spaces are fine and are removed automatically",
+    "No other part of sign-in, invoice search, or output changed - this was a two-line fix in app/gmail_auth.py plus a one-line help text update in templates/index.html"
   ],
   "gaps": [],
   "expects": [
-    "The invoice breakdown sheet as a .xlsx file with columns for enterprise/client name, a breakdown/description, an invoice date, and an amount (header wording can vary)",
-    "The admin Gmail address",
-    "A Gmail App Password for that admin account (generate at Google Account -> Security -> 2-Step Verification -> App Passwords; 2-Step Verification must be turned on)"
+    "A Gmail App Password for the admin inbox, generated from Google Account -> Security -> 2-Step Verification -> App Passwords",
+    "The invoice breakdown sheet as a real .xlsx file, with columns for enterprise/client name, a breakdown/description, an invoice date, and an amount"
   ],
   "history": [
     {
@@ -40,6 +37,12 @@
       "prompt": "Replace the current Google OAuth sign-in flow (which needs a Cloud Console app, GMAIL_CLIENT_ID/GMAIL_CLIENT_SECRET, and a redirect URI set up in advance) with a plain input field in the tool's own web page instead: an email address field and a Gmail App Password field (the 16-character password anyone can generate themselves from Google Account -> Security -> 2-Step Verification -> App Passwords, no developer setup needed). Use these two values to connect to the admin Gmail inbox over IMAP instead of the Gmail API/OAuth, and search for the invoice emails the same way as before. The app password field must be a masked password input, must never be written to disk or logged, and should only be held in memory for the current run (the user re-enters it each time they run the tool, same as they re-upload the sheet).",
       "build_id": "b_b1c05b7e96",
       "at": "2026-09-16T12:03:29.395932+00:00"
+    },
+    {
+      "version": 3,
+      "prompt": "Sign-in is rejecting valid app passwords. The likely bug: Google displays the 16-character App Password with spaces every 4 characters for readability (e.g. 'abcd efgh ijkl mnop'), but the real password has no spaces. The current code only strips leading/trailing whitespace from the app_password field, not spaces in the middle, so a copy-pasted password with its original spacing gets sent to Gmail as-is and rejected. Fix: strip ALL whitespace from the app password (not just leading/trailing) before using it to sign in. Also update the on-page help text to mention that spaces in a pasted app password are fine and will be removed automatically.",
+      "build_id": "b_59c4301a2b",
+      "at": "2026-09-16T16:50:07.523392+00:00"
     }
   ],
   "capabilities": [

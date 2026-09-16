@@ -23,7 +23,11 @@ def connect(email_address: str, app_password: str) -> imaplib.IMAP4_SSL:
     failure (blank fields, wrong credentials, 2-Step Verification not on).
     """
     email_address = (email_address or "").strip()
-    app_password = (app_password or "").strip()
+    # Google displays App Passwords with spaces every 4 characters for
+    # readability (e.g. "abcd efgh ijkl mnop"), but the real password has no
+    # spaces. Strip ALL whitespace, not just leading/trailing, so a
+    # copy-pasted password with its original spacing still works.
+    app_password = "".join((app_password or "").split())
     if not email_address or not app_password:
         raise GmailSignInError("Enter both the admin Gmail address and the app password.")
 

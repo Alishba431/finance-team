@@ -14,7 +14,7 @@ No real finance data is committed here, by design. Sample files given to the bui
 
 | Tool | What it does | Version | Last changed |
 | --- | --- | --- | --- |
-| [Subscription Invoice Fetcher](subscription-invoice-fetcher/) | Matches each row of your invoice breakdown sheet to the matching invoice email in the admin Gmail inbox and gives you… | v2 | 2026-09-16 |
+| [Subscription Invoice Fetcher](subscription-invoice-fetcher/) | Matches each row of a subscription/invoice breakdown sheet to the matching invoice email in one admin Gmail inbox, sa… | v3 | 2026-09-16 |
 | [Balance Sheet Audit Trail](balance-sheet-audit-trail/) | Traces every line on the Statement of Financial Position back to its supporting Trial Balance accounts and General Le… | v4 | 2026-09-02 |
 | [Fixed Asset Register Auto-Updater](fixed-asset-register-auto-updater/) | Upload your Fixed Asset Register once as a baseline, then each period upload that period's invoices and GL; the tool… | v3 | 2026-08-19 |
 
