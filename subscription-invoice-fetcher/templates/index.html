@@ -17,6 +17,8 @@
   .muted { color: #666; font-size: 0.9rem; }
   .error { background: #fdecea; border: 1px solid #f5c2c7; padding: 12px; border-radius: 8px; color: #842029; margin-bottom: 16px; }
   a.download { display: inline-block; margin-top: 10px; }
+  label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 0.9rem; }
+  input[type=email], input[type=password], input[type=file] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
 </style>
 </head>
 <body>
@@ -28,29 +30,23 @@
 {% endif %}
 
 <div class="card">
-  <h2>1. Admin Gmail access</h2>
-  {% if not oauth_configured %}
-    <p class="status-bad">Not configured.</p>
-    <p class="muted">Set the <code>GMAIL_CLIENT_ID</code> and <code>GMAIL_CLIENT_SECRET</code> environment variables (from a Google Cloud OAuth 2.0 "Web application" client) before this feature can be used, and add
-      <code>{{ redirect_uri }}</code> to that client's Authorized redirect URIs.</p>
-  {% elif connected %}
-    <p class="status-ok">Connected — the tool can read the admin inbox.</p>
-    <form method="post" action="/auth/gmail/disconnect">
-      <button type="submit">Disconnect</button>
-    </form>
-  {% else %}
-    <p class="status-bad">Not connected.</p>
-    <a href="/auth/gmail/start"><button type="button" onclick="window.location='/auth/gmail/start'">Connect Gmail (admin sign-in)</button></a>
-  {% endif %}
-</div>
+  <h2>Admin Gmail sign-in and invoice sheet</h2>
+  <p class="muted">Enter the admin Gmail address and a Gmail App Password (Google Account → Security → 2-Step
+    Verification → App Passwords — a 16-character code you generate yourself, no developer setup needed), then
+    upload the invoice breakdown sheet. Neither the email nor the app password is saved anywhere — you re-enter
+    them every run, and the password field is cleared as soon as this page reloads.</p>
+  <form method="post" action="/process" enctype="multipart/form-data" autocomplete="off">
+    <label for="admin_email">Admin Gmail address</label>
+    <input type="email" id="admin_email" name="admin_email" required autocomplete="off">
 
-<div class="card">
-  <h2>2. Upload the invoice breakdown sheet</h2>
-  <p class="muted">Excel file (.xlsx) with one row per enterprise/breakdown line, containing at least an enterprise name, a breakdown/description, an invoice date, and an amount column.</p>
-  <form method="post" action="/process" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".xlsx" required>
+    <label for="app_password">Gmail App Password</label>
+    <input type="password" id="app_password" name="app_password" required autocomplete="off">
+
+    <label for="file">Invoice breakdown sheet (.xlsx)</label>
+    <input type="file" id="file" name="file" accept=".xlsx" required>
+
     <br><br>
-    <input type="submit" value="Run" {{ 'disabled' if not connected else '' }}>
+    <input type="submit" value="Sign in and run">
   </form>
 </div>
 

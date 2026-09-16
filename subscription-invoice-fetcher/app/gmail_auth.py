@@ -1,83 +1,66 @@
-"""Google OAuth (web flow) for read-only access to one admin Gmail inbox.
+"""IMAP sign-in for the admin Gmail inbox using an email address + a Gmail
+App Password (Google Account -> Security -> 2-Step Verification -> App
+Passwords). Replaces the previous Google OAuth / Cloud Console flow.
 
-Requires two environment variables, set up once by whoever administers the
-Google Cloud project the finance team uses:
-
-  GMAIL_CLIENT_ID       - OAuth 2.0 client id ("Web application" type)
-  GMAIL_CLIENT_SECRET   - OAuth 2.0 client secret
-
-The redirect URI is computed at request time from the URL the app is
-actually being served at (http(s)://host:port/auth/gmail/callback) so it
-works whatever port the tool is started on. That exact URL must be added to
-the OAuth client's "Authorized redirect URIs" list in Google Cloud Console
-before the admin signs in.
-
-No secrets are hardcoded here; if the env vars are absent the app still
-starts, it just reports Gmail as "not configured" and refuses to start the
-OAuth flow until they're set.
+The app password is only ever held in memory for the duration of a single
+run's login. It is never written to disk, never saved in any settings file,
+and never included in any log line or error message.
 """
-import json
-import os
-from typing import Optional
+import imaplib
 
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
-from google.auth.transport.requests import Request as GoogleAuthRequest
-
-from .paths import TOKEN_PATH
-
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+IMAP_HOST = "imap.gmail.com"
+IMAP_PORT = 993
 
 
-def oauth_configured() -> bool:
-    return bool(os.environ.get("GMAIL_CLIENT_ID") and os.environ.get("GMAIL_CLIENT_SECRET"))
+class GmailSignInError(Exception):
+    """Raised when sign-in cannot proceed. Never include the password here."""
 
 
-def _client_config(redirect_uri: str) -> dict:
-    client_id = os.environ["GMAIL_CLIENT_ID"]
-    client_secret = os.environ["GMAIL_CLIENT_SECRET"]
-    return {
-        "web": {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [redirect_uri],
-        }
-    }
+def connect(email_address: str, app_password: str) -> imaplib.IMAP4_SSL:
+    """Logs into the admin Gmail inbox over IMAP and returns the connection.
 
+    Raises GmailSignInError with a clear, password-free reason on any
+    failure (blank fields, wrong credentials, 2-Step Verification not on).
+    """
+    email_address = (email_address or "").strip()
+    app_password = (app_password or "").strip()
+    if not email_address or not app_password:
+        raise GmailSignInError("Enter both the admin Gmail address and the app password.")
 
-def build_flow(redirect_uri: str) -> Flow:
-    return Flow.from_client_config(_client_config(redirect_uri), scopes=SCOPES, redirect_uri=redirect_uri)
-
-
-def save_credentials(creds: Credentials) -> None:
-    TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
-    TOKEN_PATH.write_text(creds.to_json())
-
-
-def load_credentials() -> Optional[Credentials]:
-    if not TOKEN_PATH.exists():
-        return None
     try:
-        data = json.loads(TOKEN_PATH.read_text())
-        creds = Credentials.from_authorized_user_info(data, SCOPES)
-    except Exception:
-        return None
-    if creds and creds.expired and creds.refresh_token:
+        imap_conn = imaplib.IMAP4_SSL(IMAP_HOST, IMAP_PORT)
+    except Exception as exc:
+        raise GmailSignInError(f"Could not reach Gmail's IMAP server: {exc}")
+
+    try:
+        imap_conn.login(email_address, app_password)
+    except imaplib.IMAP4.error:
         try:
-            creds.refresh(GoogleAuthRequest())
-            save_credentials(creds)
+            imap_conn.logout()
         except Exception:
-            return None
-    return creds
+            pass
+        raise GmailSignInError(
+            "Google rejected these credentials. Double-check the admin email address and "
+            "the app password, and make sure 2-Step Verification is turned on for that account."
+        )
+    except Exception as exc:
+        try:
+            imap_conn.logout()
+        except Exception:
+            pass
+        raise GmailSignInError(f"Could not sign in to Gmail: {exc}")
+
+    return imap_conn
 
 
-def is_connected() -> bool:
-    creds = load_credentials()
-    return bool(creds and creds.valid)
-
-
-def disconnect() -> None:
-    if TOKEN_PATH.exists():
-        TOKEN_PATH.unlink()
+def disconnect(imap_conn) -> None:
+    if not imap_conn:
+        return
+    try:
+        imap_conn.close()
+    except Exception:
+        pass
+    try:
+        imap_conn.logout()
+    except Exception:
+        pass

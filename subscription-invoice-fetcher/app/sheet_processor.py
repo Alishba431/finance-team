@@ -76,9 +76,10 @@ def _safe_filename(text):
 
 
 def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
-                      base_url: str, run_id: str, service):
-    """Runs the full match pipeline. `service` may be None to test column
-    detection without touching Gmail (not used in normal operation)."""
+                      base_url: str, run_id: str, imap_conn):
+    """Runs the full match pipeline. `imap_conn` is a logged-in IMAP4_SSL
+    connection to the admin Gmail inbox (may be None to test column
+    detection without touching Gmail; not used in normal operation)."""
     df = pd.read_excel(input_path)
     columns = detect_columns(df)
 
@@ -115,12 +116,12 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
             else:
                 start = invoice_date - timedelta(days=7)
                 end = invoice_date + timedelta(days=7)
-                candidates = gmail_search.fetch_candidates(service, start, end)
+                candidates = gmail_search.fetch_candidates(imap_conn, start, end)
                 match_status, candidate = gmail_search.find_best_match(candidates, str(enterprise_name), amount)
 
                 if match_status == "found":
                     attachment = candidate["attachments"][0]
-                    raw = gmail_search.download_attachment(service, candidate["msg_id"], attachment)
+                    raw = gmail_search.download_attachment(imap_conn, candidate["uid"], attachment)
                     ext = Path(attachment["filename"]).suffix or (
                         ".pdf" if "pdf" in attachment["mimeType"] else ".bin")
                     fname = f"{_safe_filename(enterprise_name)}_{invoice_date.isoformat()}_{idx}{ext}"

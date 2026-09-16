@@ -1,41 +1,40 @@
-# Subscription Invoice Fetcher
+# Gmail Invoice Fetcher — Sign-in Update
 
 ## What it does
-Takes your subscription invoice breakdown sheet and the admin Gmail inbox, and for each breakdown row automatically finds the matching invoice email sent around that invoice's date. It saves the invoice attachment and marks each row as found, found-but-needs-review, or not found — so nobody has to search Gmail by hand for each line.
+This tool reads your subscription invoice sheet, then logs into the admin Gmail inbox and searches for the invoice email matching each enterprise/breakdown row around its billing date. This update only changes *how you sign in* — instead of a Google "Connect" button that needed developer setup in advance, you type the admin email address and a Gmail App Password directly into the tool's page each time you run it.
 
 ## What you give it
-- **The invoice breakdown sheet** — one row per enterprise/breakdown line, with at minimum: enterprise name, breakdown description, invoice date, and amount. If a row is missing any of these, it is skipped and marked "Missing Data" — it will not be guessed at.
-  - Note: the file you attached (`subcription_invoice.tsv`) came through in a format the tool couldn't read. Please provide the real sheet as an Excel file or Google Sheet with those columns before this can be built or tested.
-- **Admin Gmail access** — a one-time sign-in/authorization for the finance team to grant the tool read access to the admin mailbox. The tool only ever reads this one inbox; it never sends mail from it.
+- **The invoice sheet** (same one as before, uploaded through the tool's page) — no changes to what it contains or requires.
+- **Admin Gmail address** — a plain text field.
+- **Gmail App Password** — a 16-character code you generate yourself from your Google Account under Security → 2-Step Verification → App Passwords. This field is masked (shows dots, not the characters) as you type it.
+
+If either the email or the app password is left blank, or Google rejects them, the tool stops before touching the sheet and tells you sign-in failed — it will not attempt to guess or reuse a previous password.
 
 ## What it gives you back
-Your same breakdown sheet, returned with two things added next to each row:
-1. A **Status** column: `Found (Attachment)`, `Found — No Attachment (Review)`, `Not Found`, or `Missing Data`.
-2. A **link to the saved invoice file** for any row where one was found (the attachment itself is saved to a folder, one file per row, named by enterprise and date — spreadsheet cells can't hold an actual PDF, so the sheet links to it instead).
+No change from the current tool: the same on-screen results and/or spreadsheet output listing, for each enterprise/breakdown row, whether a matching invoice email was found and what was done with it. This update does not add, remove, or reformat any output field.
 
 ## Rules it follows
-1. For each breakdown row, the tool searches the admin inbox for emails dated from 7 days before to 7 days after that row's invoice date.
-2. An email counts as a **match** only if its sender, subject, or body reasonably corresponds to the row's enterprise name, and its stated amount matches the row's amount (allowing for rounding differences of a few cents/rupees).
-3. A match only counts as **Found** if the matching email has a PDF or image attachment. That attachment is saved and linked in the sheet.
-4. If a matching email is found but has no attachment, the row is marked **Found — No Attachment (Review)** for someone to check manually — it is not treated as complete.
-5. If no matching email is found in the search window, the row is marked **Not Found**. No email, reminder, or escalation is sent automatically — it's left for manual follow-up.
-6. If a row is missing the enterprise name, date, or amount needed to search, it's marked **Missing Data** and skipped rather than guessed at.
+1. You must enter both the admin email address and the app password before the tool will start; it does not remember them from a previous run.
+2. The app password is used only to connect to the inbox for the current run — it is held in memory while the tool works and is discarded the moment the run ends or the page is closed.
+3. The app password is never written to a file, never saved in any settings, and never printed to any log or error message — if sign-in fails, the failure message will name the reason (e.g. "Google rejected these credentials") but never echo back the password itself.
+4. Once signed in, the tool searches the inbox for each row the same way it already does today — no change to which emails count as a match or how the search date-window is chosen.
+5. If sign-in fails (wrong email, wrong or expired app password, or 2-Step Verification not turned on for that account), the tool reports this clearly and does not process any rows.
 
 ## What I am assuming
-- The breakdown sheet will be provided as a proper Excel/Google Sheet (not the unreadable format submitted), with an enterprise name, a breakdown/description, an invoice date, and an amount column.
-- "Admin email" means one specific Gmail inbox, and finance will authorize the tool to read it once.
-- Matching is by enterprise name text plus amount — not by any other reference number, since none was described as being on the sheet.
-- Each row represents one billing period for one enterprise; you'll re-run the tool each month/cycle with a fresh copy of the sheet.
-- Since a spreadsheet cell can't literally contain a PDF, "invoice in the sheet" means a link to the saved attachment file, not the file embedded in the cell.
+- The email address and app password are for the same admin Gmail inbox the tool already searches today — this update doesn't change which inbox is used, only how the tool connects to it.
+- You (or whoever runs the tool) will generate the app password from the admin Google account beforehand; the tool does not walk you through Google's app-password screen.
+- The 2-Step Verification requirement for app passwords is something you'll enable on the admin account once, outside this tool, if it isn't already on.
+- Nothing about which invoices count as a match, how dates are compared, or what the output looks like is changing — only the sign-in step.
+- The tool runs in an environment you trust (your own machine or a shared internal server) — the "held in memory only" protection covers the app password from being saved to disk or logs, not from someone with access to that machine's memory while it's running.
 
 ## Not included
-- No verification that the PDF's actual contents (amount, vendor, etc.) match the row — only the email's sender/subject/body and stated amount are checked.
-- No automatic emailing, reminders, or escalation for "Not Found" rows.
-- No connection to Odoo or any accounting system — this tool only works off the sheet and Gmail.
-- No searching of multiple mailboxes — only the one admin inbox that's authorized.
+- This update does not change or improve the invoice-matching logic itself — any issues with which emails get picked as matches are unchanged from today's behavior.
+- It does not store or remember the app password for next time — you'll re-enter it every run, same as re-uploading the sheet.
+- It does not walk you through creating the app password in your Google Account — that's a one-time step you do yourself on Google's site.
+- It does not support inboxes or accounts that require the old Cloud Console / OAuth setup — going forward, only the email + app password sign-in works.
 
 ## How you will know it works
-- Pick a handful of rows you already know the invoice for; confirm the tool found the right attachment and linked it correctly.
-- Pick a row you know has no invoice email; confirm it's marked "Not Found," not silently skipped.
-- Check a row where the email exists but you know it has no attachment; confirm it's flagged "Found — No Attachment (Review)," not marked complete.
-- Delete a required value (e.g. amount) from one row; confirm it's marked "Missing Data" rather than matched incorrectly.
+- You can enter the admin email and a valid app password and the tool signs in and runs, without needing anything set up in a Cloud Console beforehand.
+- Entering a wrong app password gives a clear "sign-in failed" message and stops the run — it doesn't silently continue or crash.
+- After a run finishes (success or failure), you can check that the app password field is empty again if you reopen or refresh the page.
+- The invoice results you get back look the same as they did with the old Google sign-in — same rows matched, same output layout.
