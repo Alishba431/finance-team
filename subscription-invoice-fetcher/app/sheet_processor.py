@@ -15,7 +15,7 @@ REQUIRED_FIELDS = ["enterprise", "date", "amount"]
 
 COLUMN_KEYWORDS = {
     "enterprise": ["enterprise", "client", "company", "customer", "vendor", "organisation", "organization"],
-    "breakdown": ["breakdown", "description", "line item", "item", "particular"],
+    "breakdown": ["breakdown", "description", "communication", "line item", "item", "particular"],
     "date": ["date"],
     "amount": ["amount", "total", "value"],
 }
@@ -25,22 +25,72 @@ STATUS_REVIEW = "Found — No Attachment (Review)"
 STATUS_NOT_FOUND = "Not Found"
 STATUS_MISSING = "Missing Data"
 
+HEADER_SCAN_ROWS = 10
+
 _AMOUNT_CLEAN_RE = re.compile(r"[^\d.\-]")
 
 
-def _find_column(columns, keywords):
-    lower_cols = {str(c).strip().lower(): c for c in columns}
-    for kw in keywords:
-        for lower, original in lower_cols.items():
-            if kw in lower:
-                return original
-    return None
+def _cell_has_text(value):
+    return value is not None and not (isinstance(value, float) and pd.isna(value)) and str(value).strip() != ""
+
+
+def _score_header_row(cells):
+    """Counts how many distinct expected fields (enterprise/breakdown/date/amount)
+    have a matching keyword somewhere in this row's cells."""
+    field_hits = set()
+    for cell in cells:
+        if not _cell_has_text(cell):
+            continue
+        text = str(cell).strip().lower()
+        for field, keywords in COLUMN_KEYWORDS.items():
+            if any(kw in text for kw in keywords):
+                field_hits.add(field)
+    return len(field_hits)
+
+
+def find_header_row(input_path, max_scan_rows=HEADER_SCAN_ROWS):
+    """Scans the first `max_scan_rows` rows of the sheet for the row that best
+    matches expected column-name keywords, skipping any title/label rows above
+    it. Returns the 0-based row index to use as the header, or None if no row
+    in that range looks enough like a header at all."""
+    raw = pd.read_excel(input_path, header=None, nrows=max_scan_rows)
+    best_idx, best_score = None, 0
+    for i in range(len(raw)):
+        score = _score_header_row(raw.iloc[i].tolist())
+        if score > best_score:
+            best_score, best_idx = score, i
+    return best_idx
+
+
+def _populated_count(df, column, field):
+    series = df[column]
+    if field == "amount":
+        return series.apply(_parse_amount).notna().sum()
+    if field == "date":
+        return series.apply(_parse_date).notna().sum()
+    return series.apply(_cell_has_text).sum()
+
+
+def _find_column(df, keywords, field):
+    lower_cols = {str(c).strip().lower(): c for c in df.columns}
+    matches = []
+    for lower, original in lower_cols.items():
+        if any(kw in lower for kw in keywords):
+            matches.append(original)
+    if not matches:
+        return None
+    if len(matches) == 1:
+        return matches[0]
+    # More than one column name matches (e.g. "Breakup Amounts" and "Amount in
+    # dollars") - prefer whichever one actually has real values in most rows
+    # rather than just taking the first name match.
+    return max(matches, key=lambda col: _populated_count(df, col, field))
 
 
 def detect_columns(df):
     detected = {}
     for field, keywords in COLUMN_KEYWORDS.items():
-        detected[field] = _find_column(df.columns, keywords)
+        detected[field] = _find_column(df, keywords, field)
     return detected
 
 
@@ -80,7 +130,16 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
     """Runs the full match pipeline. `imap_conn` is a logged-in IMAP4_SSL
     connection to the admin Gmail inbox (may be None to test column
     detection without touching Gmail; not used in normal operation)."""
-    df = pd.read_excel(input_path)
+    header_row = find_header_row(input_path)
+    if header_row is None:
+        return {
+            "counts": {STATUS_FOUND: 0, STATUS_REVIEW: 0, STATUS_NOT_FOUND: 0, STATUS_MISSING: 0},
+            "missing_columns": REQUIRED_FIELDS,
+            "total_rows": 0,
+            "unreadable": True,
+        }
+
+    df = pd.read_excel(input_path, header=header_row)
     columns = detect_columns(df)
 
     missing_required = [f for f in REQUIRED_FIELDS if columns.get(f) is None]
@@ -148,4 +207,5 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
         "counts": counts,
         "missing_columns": missing_required,
         "total_rows": len(df),
+        "unreadable": False,
     }

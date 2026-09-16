@@ -1,32 +1,35 @@
-# Gmail App Password Sign-In Fix
+# Subscription Invoice Fetcher
 
 ## What it does
-Fixes sign-in so a Gmail App Password copy-pasted with the spaces Google shows for readability (like "abcd efgh ijkl mnop") works correctly, by removing all spaces before it's used. The on-page help text is also updated to tell users spaces are fine and will be removed automatically.
+This tool reads your subscription invoice spreadsheet, finds the real column headers even when the sheet has a title or section label sitting above them (e.g. "20001 Software Subscriptions - Engineering" in row 1), and checks every invoice row underneath for the enterprise name, invoice date, description, and amount it needs. Rows that are genuinely missing one of those are flagged as Missing Data — rows aren't flagged just because the tool was looking at the wrong row for headers.
 
 ## What you give it
-No new inputs. You still enter the same **Email address** and **Gmail App Password** as before, on the same sign-in page.
+- **The invoice spreadsheet.** Somewhere in its first 10 rows there must be one row of column headers containing recognizable names for: Enterprise (or Client/Company/Vendor), a description/breakdown column (e.g. Communication / Breakdown), an invoice date, and an amount. Above that header row, the sheet can have a title or section-label row — the tool now skips past it instead of treating it as the header.
+- If no row in the first 10 looks like a header at all, the tool skips that sheet and reports it as unreadable rather than marking every row Missing Data.
 
 ## What it gives you back
-No new output. The tool signs in and fetches invoices exactly as it does today — the only visible difference is that pasting the password with its original spacing now works, and the help text under the password field explains this.
+The same results report you already get: one row per invoice, showing the enterprise, invoice date, description, and amount the tool read out, with a Missing Data flag on any row that's actually missing one of those fields — plus, now, a separate "sheet unreadable" note if no header row could be found at all.
 
 ## Rules it follows
-1. Before the app password is used to sign in, every space inside it is removed — not just spaces at the start or end — so "abcd efgh ijkl mnop" and "abcdefghijklmnop" are treated as the same password.
-2. If, after removing spaces, the password is not 16 characters, sign-in fails with the same "invalid app password" message shown today — no new error message is introduced.
-3. The help text next to the App Password field is updated to say that spaces are fine to leave in when pasting and will be stripped automatically.
-4. Nothing else about sign-in changes: the password is still never written to disk or logged, and it is still held only in memory for the current run.
+1. The tool looks at the first 10 rows of the sheet and picks the one row that best matches expected column names (enterprise/client/company/vendor, breakdown/description/communication, date, amount) as the real header row.
+2. Any row above that header row — titles, section labels — is treated as decoration and never read as invoice data.
+3. Once the header row is found, a row is marked Missing Data only if it is actually missing the enterprise, invoice date, description/breakdown, or amount for that row.
+4. If no row in the first 10 looks enough like a header, the whole sheet is reported as unreadable, instead of every row in it being marked Missing Data.
 
 ## What I am assuming
-- Only spaces need stripping — App Passwords don't contain tabs or other whitespace, but if any sneak in (e.g. from a paste), those are stripped too since the fix strips all whitespace, not just spaces.
-- The wording of the updated help text is not prescribed by you; I'll write a short, plain sentence and you can request changes to it.
-- No other part of the sign-in flow, the invoice search, or the output changes — this is a two-line fix plus a text update, nothing else in the tool is touched.
+- The real header row is always within the first 10 rows of the sheet — never further down.
+- When a column is literally named "Enterprise," that is the enterprise/client name column.
+- Each sheet has one header row, not headers split across two rows.
+- A sheet that doesn't have any row resembling a header (wrong keywords, non-standard names) is better reported to you as "unreadable" than guessed at.
+- Everything else about the report — its layout and how you receive it — stays exactly as it is today; only how the header row is found is changing.
 
 ## Not included
-- No change to how invoices are found, formatted, or exported — that logic is untouched.
-- No validation that the email address is a real Gmail address — that's unchanged from today.
-- No stronger error message that would tell the user specifically "your password has the wrong number of characters" — today's generic failure message stays as is, unless you tell me otherwise.
+- No way to manually tell the tool which row is the header if its automatic guess is wrong on a particular sheet — you'd need to flag that sheet to us.
+- Sheets whose column names don't contain any of the recognized keywords (enterprise/client/company/vendor, breakdown/description/communication, date, amount) will still be reported as unreadable, not processed by guesswork.
+- Headers split across two separate rows are not supported.
 
 ## How you will know it works
-1. Generate a fresh App Password from Google, copy it exactly as Google displays it (with spaces), paste it into the field, and confirm sign-in succeeds.
-2. Remove the spaces yourself and paste the 16-character password with no spaces — confirm sign-in still succeeds.
-3. Look at the password field's help text and confirm it now mentions that spaces are fine.
-4. Enter a deliberately wrong password (right length, wrong characters) and confirm you still get the same failure message as before — nothing else changed.
+- Upload the real sheet with the "20001 Software Subscriptions..." title row in row 1 — the invoice rows should now come back with real data instead of every row saying Missing Data.
+- A row that's genuinely missing, say, an invoice date should still show Missing Data for that row.
+- A normal sheet with no title row above the headers should still work exactly as it did before this fix.
+- A sheet with no recognizable header row anywhere in the first 10 rows should come back as "unreadable," not as a wall of Missing Data rows.

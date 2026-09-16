@@ -2,11 +2,11 @@
   "slug": "subscription-invoice-fetcher",
   "system_id": "subscription-invoice-fetcher",
   "title": "Subscription Invoice Fetcher",
-  "summary": "Matches each row of a subscription/invoice breakdown sheet to the matching invoice email in one admin Gmail inbox, saves the PDF/image attachment, and returns your sheet with a Status column and a link to the saved file next to each row. Signs in with just an email address and a Gmail App Password over IMAP.",
-  "prompt": "Sign-in is rejecting valid app passwords. The likely bug: Google displays the 16-character App Password with spaces every 4 characters for readability (e.g. 'abcd efgh ijkl mnop'), but the real password has no spaces. The current code only strips leading/trailing whitespace from the app_password field, not spaces in the middle, so a copy-pasted password with its original spacing gets sent to Gmail as-is and rejected. Fix: strip ALL whitespace from the app password (not just leading/trailing) before using it to sign in. Also update the on-page help text to mention that spaces in a pasted app password are fine and will be removed automatically.",
-  "version": 3,
+  "summary": "Matches each row of a subscription/invoice breakdown sheet to the matching invoice email in an admin Gmail inbox, saves the attachment, and returns the sheet with a Status column and a link to each found invoice. It now finds the real header row even when a title/section label sits above it, and prefers whichever same-named column (e.g. two 'amount' columns) actually has real values when the sheet has ambiguous column names.",
+  "prompt": "Every row is coming back as Missing Data on a real sheet. The cause: the sheet has a title/section label in row 1 (e.g. '20001  Software Subscriptions - Engineering') and the ACTUAL column headers are in row 2 (Sr No, Voucher Number, Invoice Date, Communication / Breakdown, Partner (Vendor), Debit, Breakup Amounts, Amount in dollars, Enterprise, Test Case (reference only)). The code currently does pd.read_excel(input_path) with no header row detection, so it always treats row 1 as the header \u2014 which is wrong here, so no column ever matches and every row is marked Missing Data. Fix: instead of assuming row 1 is the header, scan the first several rows (e.g. first 10) for the row that actually looks like a header \u2014 the one containing the most recognizable column-name keywords (enterprise/client/company/vendor, breakdown/description/communication, date, amount) \u2014 and use that row as the real header, skipping any title/label rows above it. Keep everything else the same (still uses the 'Enterprise' column for enterprise name, a breakdown/description column, an invoice date column, and an amount column).",
+  "version": 4,
   "created_at": "2026-09-14T16:27:10.357938+00:00",
-  "updated_at": "2026-09-16T16:50:07.523392+00:00",
+  "updated_at": "2026-09-16T17:09:55.355429+00:00",
   "run": {
     "install": [
       "pip install -r requirements.txt"
@@ -16,14 +16,19 @@
     "health_path": "/"
   },
   "assumptions": [
-    "Only spaces needed stripping from the App Password field before sign-in; the fix strips all whitespace (not just leading/trailing) so any stray tabs from a paste are removed too",
-    "The wording of the updated help text under the App Password field was not prescribed; a short plain sentence was written explaining spaces are fine and are removed automatically",
-    "No other part of sign-in, invoice search, or output changed - this was a two-line fix in app/gmail_auth.py plus a one-line help text update in templates/index.html"
+    "The real header row is always within the first 10 rows of the sheet, never further down",
+    "Each sheet has one header row, not headers split across two rows",
+    "When more than one column name matches a field's keywords (e.g. 'Breakup Amounts' and 'Amount in dollars'), the column with the most populated/parseable values in that data is the real one to use",
+    "A sheet with no row resembling a header anywhere in the first 10 rows is reported as unreadable rather than guessed at"
   ],
-  "gaps": [],
+  "gaps": [
+    "No way to manually pick the header row if the automatic guess is wrong on a particular sheet",
+    "Sheets whose column names contain none of the recognized keywords are reported as unreadable, not processed by guesswork",
+    "Headers split across two separate rows are not supported"
+  ],
   "expects": [
-    "A Gmail App Password for the admin inbox, generated from Google Account -> Security -> 2-Step Verification -> App Passwords",
-    "The invoice breakdown sheet as a real .xlsx file, with columns for enterprise/client name, a breakdown/description, an invoice date, and an amount"
+    "The invoice breakdown sheet as a real .xlsx file, with a header row somewhere in its first 10 rows containing recognizable names for enterprise/client/company/vendor, a breakdown/description/communication column, an invoice date, and an amount",
+    "A Gmail App Password for the admin inbox (16 characters, spaces from Google's display are stripped automatically)"
   ],
   "history": [
     {
@@ -43,6 +48,12 @@
       "prompt": "Sign-in is rejecting valid app passwords. The likely bug: Google displays the 16-character App Password with spaces every 4 characters for readability (e.g. 'abcd efgh ijkl mnop'), but the real password has no spaces. The current code only strips leading/trailing whitespace from the app_password field, not spaces in the middle, so a copy-pasted password with its original spacing gets sent to Gmail as-is and rejected. Fix: strip ALL whitespace from the app password (not just leading/trailing) before using it to sign in. Also update the on-page help text to mention that spaces in a pasted app password are fine and will be removed automatically.",
       "build_id": "b_59c4301a2b",
       "at": "2026-09-16T16:50:07.523392+00:00"
+    },
+    {
+      "version": 4,
+      "prompt": "Every row is coming back as Missing Data on a real sheet. The cause: the sheet has a title/section label in row 1 (e.g. '20001  Software Subscriptions - Engineering') and the ACTUAL column headers are in row 2 (Sr No, Voucher Number, Invoice Date, Communication / Breakdown, Partner (Vendor), Debit, Breakup Amounts, Amount in dollars, Enterprise, Test Case (reference only)). The code currently does pd.read_excel(input_path) with no header row detection, so it always treats row 1 as the header \u2014 which is wrong here, so no column ever matches and every row is marked Missing Data. Fix: instead of assuming row 1 is the header, scan the first several rows (e.g. first 10) for the row that actually looks like a header \u2014 the one containing the most recognizable column-name keywords (enterprise/client/company/vendor, breakdown/description/communication, date, amount) \u2014 and use that row as the real header, skipping any title/label rows above it. Keep everything else the same (still uses the 'Enterprise' column for enterprise name, a breakdown/description column, an invoice date column, and an amount column).",
+      "build_id": "b_4050d77c02",
+      "at": "2026-09-16T17:09:55.355429+00:00"
     }
   ],
   "capabilities": [

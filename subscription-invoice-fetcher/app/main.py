@@ -66,7 +66,8 @@ async def process(
             input_path, output_path, run_attachments_dir, base_url, run_id, imap_conn
         )
         summary["run_id"] = run_id
-        RESULTS[run_id] = {"output_path": str(output_path)}
+        if not summary.get("unreadable"):
+            RESULTS[run_id] = {"output_path": str(output_path)}
         result = summary
     except Exception as exc:
         traceback.print_exc()
