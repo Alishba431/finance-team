@@ -9,9 +9,16 @@ import re
 import html as html_lib
 from datetime import timedelta
 from email.header import decode_header
+from pathlib import Path
 
 MAX_CANDIDATES = 150  # cap per-row IMAP reads so one huge mailbox can't hang a run
 ATTACHMENT_MIME_PREFIXES = ("application/pdf", "image/")
+# Some senders (and some mail clients that relay/forward a message) label a
+# real PDF/image attachment with a generic binary mime type instead of its
+# real one. When that happens the filename's extension is the only reliable
+# signal left, so it's checked in addition to ATTACHMENT_MIME_PREFIXES below.
+GENERIC_BINARY_MIME_TYPES = {"application/octet-stream", "application/x-download", "binary/octet-stream"}
+ATTACHMENT_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".heic", ".tif", ".tiff", ".bmp", ".webp")
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _AMOUNT_RE = re.compile(r"(?<![\d.])\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})?(?![\d])")
@@ -45,6 +52,19 @@ def _decode_header_value(value) -> str:
     return decoded
 
 
+def _is_attachment_part(content_type: str, filename: str) -> bool:
+    if not filename:
+        return False
+    if content_type.startswith(ATTACHMENT_MIME_PREFIXES):
+        return True
+    # A generic/binary mime type is still worth treating as an attachment if
+    # the filename itself has a recognizable extension - some senders (and
+    # some relaying mail clients) mislabel real PDFs/images this way.
+    if content_type in GENERIC_BINARY_MIME_TYPES:
+        return Path(filename).suffix.lower() in ATTACHMENT_EXTENSIONS
+    return False
+
+
 def _walk_message(msg, out_text, out_attachments):
     for part in msg.walk():
         if part.get_content_maintype() == "multipart":
@@ -56,7 +76,7 @@ def _walk_message(msg, out_text, out_attachments):
         # billing systems send PDFs with no Content-Disposition header at
         # all, or with "inline" instead of "attachment", and the file is
         # just as real and downloadable either way.
-        if filename and content_type.startswith(ATTACHMENT_MIME_PREFIXES):
+        if _is_attachment_part(content_type, filename):
             out_attachments.append({
                 "filename": _decode_header_value(filename),
                 "mimeType": content_type,
@@ -95,13 +115,18 @@ def fetch_candidates(imap_conn, start_date, end_date):
             continue
         text_parts, attachments = [], []
         _walk_message(msg, text_parts, attachments)
+        print(
+            f"[gmail_search] uid={uid!r} subject={_decode_header_value(msg.get('Subject'))!r} "
+            f"attachments={[(a['filename'], a['mimeType']) for a in attachments]}",
+            flush=True,
+        )
         candidates.append({
             "uid": uid.decode() if isinstance(uid, bytes) else uid,
             "sender": _decode_header_value(msg.get("From")),
             "subject": _decode_header_value(msg.get("Subject")),
             "body_text": "\n".join(text_parts)[:20000],
             "snippet": "",
-            "attachments": [a for a in attachments if a["mimeType"].startswith(ATTACHMENT_MIME_PREFIXES)],
+            "attachments": attachments,
         })
     return candidates
 
