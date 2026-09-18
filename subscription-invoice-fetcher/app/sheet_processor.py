@@ -127,7 +127,8 @@ def _safe_filename(text):
 
 
 def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
-                      base_url: str, run_id: str, imap_conn, progress_cb=None):
+                      base_url: str, run_id: str, imap_conn, progress_cb=None,
+                      public_path_prefix: str = ""):
     """Runs the full match pipeline. `imap_conn` is a logged-in IMAP4_SSL
     connection to the admin Gmail inbox (may be None to test column
     detection without touching Gmail; not used in normal operation).
@@ -216,7 +217,7 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
                     link_url = gdrive.upload_pdf(fname, raw, attachment["mimeType"])
                     if not link_url:
                         (attachments_dir / fname).write_bytes(raw)
-                        link_url = f"{base_url.rstrip('/')}/attachments/{run_id}/{fname}"
+                        link_url = f"{base_url.rstrip('/')}{public_path_prefix}/attachments/{run_id}/{fname}"
                 elif match_status == "review":
                     status = STATUS_REVIEW
                 else:
