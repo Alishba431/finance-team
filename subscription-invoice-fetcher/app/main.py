@@ -22,6 +22,13 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 # request handler for the duration of that one run.
 RESULTS = {}
 
+# Set by the gateway (e.g. "/subscription-invoice-fetcher") when this app is
+# run as a subprocess behind a reverse proxy under a path prefix, so
+# absolute URLs embedded in the downloadable .xlsx (which has no "current
+# page" of its own to resolve a relative link against) still point back
+# through the gateway correctly. Empty string when run standalone.
+PUBLIC_PATH_PREFIX = os.environ.get("PUBLIC_PATH_PREFIX", "")
+
 # In-memory row-by-row progress per run, polled by the browser while
 # /process is still working through the sheet so the page can show
 # "Processing row N of M..." instead of a static loading message.
@@ -81,6 +88,7 @@ async def process(
         summary = sheet_processor.process_workbook(
             input_path, output_path, run_attachments_dir, base_url, run_id, imap_conn,
             progress_cb=report_progress,
+            public_path_prefix=PUBLIC_PATH_PREFIX,
         )
         summary["run_id"] = run_id
         if not summary.get("unreadable"):

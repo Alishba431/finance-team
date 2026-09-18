@@ -6,6 +6,14 @@ This repo does not hold Orion's own source code; that lives in the Orion repo.
 
 **Start at [`index.html`](index.html)** — the home page listing every tool. Open it with Orion running (`uvicorn app.main:app --reload`, then <http://127.0.0.1:8000/systems>) and each tool can be started from there.
 
+## Single-service deployment
+
+The whole repo can also run as one deployable service — dashboard at `/`,
+each tool under its own path prefix (`/subscription-invoice-fetcher/`,
+`/balance-sheet-audit-trail/`, `/fixed-asset-register-auto-updater/`) — via
+the gateway at [`gateway.py`](gateway.py). See [`GATEWAY.md`](GATEWAY.md)
+for how it works and how to run/deploy it.
+
 ## Data
 
 No real finance data is committed here, by design. Sample files given to the builder are read only to learn the shape of a spreadsheet — column names, sheet names, types. The tools take real data when you run them, and it stays on the machine you run them on.
