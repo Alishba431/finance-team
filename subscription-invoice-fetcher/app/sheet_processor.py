@@ -11,7 +11,7 @@ from openpyxl.styles import Font
 
 from . import gdrive, gmail_search
 
-REQUIRED_FIELDS = ["enterprise", "date", "amount"]
+REQUIRED_FIELDS = ["date", "amount"]
 
 COLUMN_KEYWORDS = {
     "enterprise": ["enterprise", "client", "company", "customer", "organisation", "organization"],
@@ -148,6 +148,11 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
     columns = detect_columns(df)
 
     missing_required = [f for f in REQUIRED_FIELDS if columns.get(f) is None]
+    # Enterprise is display-only; some identifier (vendor OR enterprise) is
+    # still needed to search Gmail, but it doesn't have to be "enterprise"
+    # specifically - a sheet with only a Partner/Vendor column is fine.
+    if columns.get("vendor") is None and columns.get("enterprise") is None:
+        missing_required.append("vendor or enterprise")
 
     wb = Workbook()
     ws = wb.active
@@ -168,7 +173,8 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
     # display only. Sheets with no separate vendor column fall back to
     # matching on the enterprise column, same as before this change.
     vendor_col = columns.get("vendor")
-    match_col = vendor_col if vendor_col is not None else columns["enterprise"]
+    enterprise_col = columns.get("enterprise")
+    match_col = vendor_col if vendor_col is not None else enterprise_col
 
     total_rows = len(df)
     for idx, row in df.iterrows():
@@ -181,7 +187,6 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
         if missing_required:
             status = STATUS_MISSING
         else:
-            enterprise_name = row.get(columns["enterprise"])
             match_name = row.get(match_col)
             amount = _parse_amount(row.get(columns["amount"]))
             invoice_date = _parse_date(row.get(columns["date"]))
@@ -189,8 +194,7 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
             def _blank(value):
                 return not value or (isinstance(value, float) and pd.isna(value))
 
-            if (_blank(enterprise_name) or _blank(match_name)
-                    or amount is None or invoice_date is None):
+            if _blank(match_name) or amount is None or invoice_date is None:
                 status = STATUS_MISSING
             else:
                 start = invoice_date - timedelta(days=7)
