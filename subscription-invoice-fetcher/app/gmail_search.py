@@ -7,9 +7,21 @@ ever sent, modified, or deleted in the mailbox.
 import email
 import re
 import html as html_lib
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from email.header import decode_header
 from pathlib import Path
+
+from .paths import DATA_DIR
+
+_DEBUG_LOG_PATH = DATA_DIR / "gmail_debug.log"
+
+
+def _debug(line: str) -> None:
+    try:
+        with open(_DEBUG_LOG_PATH, "a") as fh:
+            fh.write(f"{datetime.now(timezone.utc).isoformat()} {line}\n")
+    except Exception:
+        pass
 
 MAX_CANDIDATES = 150  # cap per-row IMAP reads so one huge mailbox can't hang a run
 ATTACHMENT_MIME_PREFIXES = ("application/pdf", "image/")
@@ -65,12 +77,18 @@ def _is_attachment_part(content_type: str, filename: str) -> bool:
     return False
 
 
-def _walk_message(msg, out_text, out_attachments):
+def _walk_message(msg, out_text, out_attachments, debug_label=""):
     for part in msg.walk():
-        if part.get_content_maintype() == "multipart":
+        maintype = part.get_content_maintype()
+        if maintype == "multipart":
             continue
         content_type = part.get_content_type()
         filename = part.get_filename()
+        if debug_label:
+            _debug(
+                f"{debug_label} part maintype={maintype!r} content_type={content_type!r} "
+                f"filename={filename!r} content_disposition={part.get('Content-Disposition')!r}"
+            )
         # A part counts as an attachment whenever it carries a filename and a
         # mime type we care about, regardless of Content-Disposition: many
         # billing systems send PDFs with no Content-Disposition header at
@@ -102,6 +120,7 @@ def fetch_candidates(imap_conn, start_date, end_date):
     typ, data = imap_conn.uid("search", None, f"(SINCE {since} BEFORE {before})")
     uids = data[0].split() if typ == "OK" and data and data[0] else []
     uids = uids[:MAX_CANDIDATES]
+    _debug(f"SEARCH (SINCE {since} BEFORE {before}) typ={typ!r} -> {len(uids)} candidate uid(s)")
 
     candidates = []
     for uid in uids:
@@ -114,12 +133,10 @@ def fetch_candidates(imap_conn, start_date, end_date):
         except Exception:
             continue
         text_parts, attachments = [], []
-        _walk_message(msg, text_parts, attachments)
-        print(
-            f"[gmail_search] uid={uid!r} subject={_decode_header_value(msg.get('Subject'))!r} "
-            f"attachments={[(a['filename'], a['mimeType']) for a in attachments]}",
-            flush=True,
-        )
+        uid_str = uid.decode() if isinstance(uid, bytes) else uid
+        subject = _decode_header_value(msg.get("Subject"))
+        _walk_message(msg, text_parts, attachments, debug_label=f"uid={uid_str} subject={subject!r}")
+        _debug(f"uid={uid_str} subject={subject!r} -> attachments={attachments}")
         candidates.append({
             "uid": uid.decode() if isinstance(uid, bytes) else uid,
             "sender": _decode_header_value(msg.get("From")),
