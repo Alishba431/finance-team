@@ -201,7 +201,7 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
                 start = invoice_date - timedelta(days=7)
                 end = invoice_date + timedelta(days=7)
                 candidates = gmail_search.fetch_candidates(imap_conn, start, end)
-                match_status, candidate = gmail_search.find_best_match(candidates, str(match_name), amount)
+                match_status, candidate = gmail_search.find_best_match(imap_conn, candidates, str(match_name), amount)
 
                 if match_status == "found":
                     attachment = candidate["attachments"][0]

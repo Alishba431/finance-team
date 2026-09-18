@@ -5,6 +5,7 @@ Read-only: only IMAP SELECT (readonly) / SEARCH / FETCH are used. Nothing is
 ever sent, modified, or deleted in the mailbox.
 """
 import email
+import io
 import re
 import html as html_lib
 from datetime import timedelta, datetime, timezone
@@ -160,10 +161,8 @@ def name_matches(enterprise_name: str, candidate: dict) -> bool:
     return len(overlap) >= max(1, round(len(target_words) * 0.6))
 
 
-def amount_matches(expected_amount: float, candidate: dict, tolerance: float = 1.0) -> bool:
-    haystack = " ".join([candidate.get("subject", ""), candidate.get("body_text", ""),
-                          candidate.get("snippet", "")])
-    for raw in _AMOUNT_RE.findall(haystack):
+def _amount_in_text(text: str, expected_amount: float, tolerance: float = 1.0) -> bool:
+    for raw in _AMOUNT_RE.findall(text or ""):
         cleaned = raw.replace(",", "").replace(" ", "")
         try:
             value = float(cleaned)
@@ -174,19 +173,76 @@ def amount_matches(expected_amount: float, candidate: dict, tolerance: float = 1
     return False
 
 
-def find_best_match(candidates, enterprise_name, expected_amount):
+def amount_matches(expected_amount: float, candidate: dict, tolerance: float = 1.0) -> bool:
+    haystack = " ".join([candidate.get("subject", ""), candidate.get("body_text", ""),
+                          candidate.get("snippet", "")])
+    return _amount_in_text(haystack, expected_amount, tolerance)
+
+
+def _is_pdf_attachment(attachment: dict) -> bool:
+    mime = (attachment.get("mimeType") or "").lower()
+    if mime.startswith("application/pdf"):
+        return True
+    return Path(attachment.get("filename") or "").suffix.lower() == ".pdf"
+
+
+def _extract_pdf_text(data: bytes) -> str:
+    """Best-effort text extraction from a PDF attachment's raw bytes.
+
+    Some invoices only state their amount inside the attached PDF, never in
+    the email's own subject/body - amount_matches() alone can never find
+    those. This is the fallback: only invoked when a candidate already
+    passed name_matches() but failed amount_matches() on the email text
+    itself, so it stays rare (most invoices DO put the amount in the body).
+    A malformed/encrypted/scanned-with-no-text-layer PDF just yields no
+    text, which is treated as "no amount found here" rather than an error -
+    this is a best-effort fallback, not a hard requirement.
+    """
+    try:
+        import pdfplumber
+    except ImportError:
+        return ""
+    try:
+        with pdfplumber.open(io.BytesIO(data)) as pdf:
+            return "\n".join(page.extract_text() or "" for page in pdf.pages)
+    except Exception:
+        return ""
+
+
+def find_best_match(imap_conn, candidates, enterprise_name, expected_amount):
     """Returns (status, candidate_or_none) per the spec's rules.
 
     status is one of: 'found', 'review', 'not_found'
+
+    Amount matching is checked first against the email's own subject/body
+    text (cheap, no extra IMAP round-trip). Only for a candidate that
+    already matches by name but not by that text is a PDF attachment (if
+    any) downloaded and its extracted text checked for the amount too -
+    this keeps the common case (amount already in the email body) exactly
+    as fast as before.
     """
-    matches = [c for c in candidates
-               if name_matches(enterprise_name, c) and amount_matches(expected_amount, c)]
-    if not matches:
+    name_matched = [c for c in candidates if name_matches(enterprise_name, c)]
+    if not name_matched:
         return "not_found", None
-    with_attachment = [c for c in matches if c["attachments"]]
-    if with_attachment:
-        return "found", with_attachment[0]
-    return "review", matches[0]
+
+    body_matches = [c for c in name_matched if amount_matches(expected_amount, c)]
+    if body_matches:
+        with_attachment = [c for c in body_matches if c["attachments"]]
+        if with_attachment:
+            return "found", with_attachment[0]
+        return "review", body_matches[0]
+
+    for candidate in name_matched:
+        for attachment in candidate["attachments"]:
+            if not _is_pdf_attachment(attachment):
+                continue
+            raw = download_attachment(imap_conn, candidate["uid"], attachment)
+            if not raw:
+                continue
+            if _amount_in_text(_extract_pdf_text(raw), expected_amount):
+                return "found", candidate
+
+    return "not_found", None
 
 
 def download_attachment(imap_conn, uid, attachment):
