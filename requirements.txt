@@ -1,0 +1,32 @@
+# Requirements for the gateway process itself (gateway.py) AND, since the
+# gateway launches all three tools as subprocesses of the SAME Python
+# environment (see GATEWAY.md), the union of all three tools'
+# requirements.txt files too. Checked for conflicting pins before merging:
+# only subscription-invoice-fetcher/requirements.txt pins exact versions,
+# the other two tools leave their deps unpinned, so pip can resolve a
+# single compatible set here without any real version conflict.
+#
+# If you add a new pinned dependency to any tool's own requirements.txt,
+# re-check this file for a conflict before deploying.
+
+httpx==0.27.2
+
+# --- subscription-invoice-fetcher ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+openpyxl==3.1.5
+pandas==2.2.3
+jinja2==3.1.4
+google-api-python-client==2.149.0
+google-auth==2.35.0
+
+# --- balance-sheet-audit-trail ---
+# fastapi, uvicorn, openpyxl, python-multipart already pinned above
+
+# --- fixed-asset-register-auto-updater ---
+pdfplumber
+Pillow
+numpy
+rapidocr-onnxruntime
+python-dateutil

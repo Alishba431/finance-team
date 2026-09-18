@@ -78,7 +78,7 @@ $("upload-form").addEventListener("submit", async (e) => {
   btn.disabled = true;
   btn.textContent = "Uploading...";
   try {
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const res = await fetch("api/upload", { method: "POST", body: fd });
     const data = await res.json();
     if (!res.ok) {
       showError("upload-error", data.error || "Upload failed.");
@@ -128,7 +128,7 @@ $("analyze-btn").addEventListener("click", async () => {
   btn.disabled = true;
   btn.textContent = "Running...";
   try {
-    const res = await fetch("/api/analyze", { method: "POST", body: fd });
+    const res = await fetch("api/analyze", { method: "POST", body: fd });
     const data = await res.json();
     if (!res.ok) {
       showError("analyze-error", data.error || "Analysis failed.");
@@ -159,7 +159,7 @@ $("odoo-form").addEventListener("submit", async (e) => {
   btn.disabled = true;
   btn.textContent = "Pulling from Odoo...";
   try {
-    const res = await fetch("/api/odoo/pull", { method: "POST", body: fd });
+    const res = await fetch("api/odoo/pull", { method: "POST", body: fd });
     const data = await res.json();
     if (!res.ok) {
       showError("odoo-error", data.error || "Could not pull data from Odoo.");
@@ -206,8 +206,8 @@ function renderReport(report) {
     .map((c) => `<div class="stat"><div class="num">${c[1]}</div><div class="label">${c[0]}</div></div>`)
     .join("");
 
-  $("export-summary").href = `/api/export/${SESSION_ID}/summary.csv`;
-  $("export-gl-detail").href = `/api/export/${SESSION_ID}/gl-detail.csv`;
+  $("export-summary").href = `api/export/${SESSION_ID}/summary.csv`;
+  $("export-gl-detail").href = `api/export/${SESSION_ID}/gl-detail.csv`;
 
   const tbody = $("lines-tbody");
   tbody.innerHTML = "";
@@ -333,7 +333,7 @@ async function remapTb(tbName, targetLabel) {
   fd.append("session_id", SESSION_ID);
   fd.append("tb_name", tbName);
   fd.append("target_label", targetLabel);
-  const res = await fetch("/api/remap", { method: "POST", body: fd });
+  const res = await fetch("api/remap", { method: "POST", body: fd });
   const data = await res.json();
   if (!res.ok) {
     alert(data.error || "Could not update mapping.");
@@ -386,7 +386,7 @@ function renderSectionRows(report) {
 // ---------- GL drill-down modal ----------
 
 async function openGlModal(account) {
-  const res = await fetch(`/api/gl-transactions/${SESSION_ID}?account=${encodeURIComponent(account)}`);
+  const res = await fetch(`api/gl-transactions/${SESSION_ID}?account=${encodeURIComponent(account)}`);
   const data = await res.json();
   if (!res.ok) {
     alert(data.error || "Could not load GL transactions.");

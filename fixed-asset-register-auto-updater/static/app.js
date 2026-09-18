@@ -1,5 +1,5 @@
 async function refreshStatus() {
-  const res = await fetch('/api/status');
+  const res = await fetch('api/status');
   const st = await res.json();
 
   const baselineDiv = document.getElementById('baseline-status');
@@ -59,7 +59,7 @@ document.getElementById('baseline-form').addEventListener('submit', async (e) =>
   const resultDiv = document.getElementById('baseline-result');
   resultDiv.textContent = 'Uploading and inspecting baseline FAR…';
   try {
-    const res = await fetch('/api/baseline', { method: 'POST', body: fd });
+    const res = await fetch('api/baseline', { method: 'POST', body: fd });
     const data = await res.json();
     if (!res.ok) {
       resultDiv.innerHTML = `<p class="status err">${escapeHtml(data.detail || 'Upload failed.')}</p>`;
@@ -98,7 +98,7 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
   resultsSection.style.display = 'none';
 
   try {
-    const res = await fetch('/api/run_update', { method: 'POST', body: fd });
+    const res = await fetch('api/run_update', { method: 'POST', body: fd });
     const data = await res.json();
     if (!res.ok) {
       statusDiv.className = 'status err';
@@ -161,7 +161,7 @@ function renderResults(data) {
     html += '<p class="empty">Nothing new was found to process for this period.</p>';
   }
 
-  html += '<p><a class="button" href="/api/download">Download updated FAR</a></p>';
+  html += '<p><a class="button" href="api/download">Download updated FAR</a></p>';
   resultsDiv.innerHTML = html;
 }
 
