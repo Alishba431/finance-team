@@ -9,7 +9,7 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from . import gmail_search
+from . import gdrive, gmail_search
 
 REQUIRED_FIELDS = ["enterprise", "date", "amount"]
 
@@ -204,9 +204,15 @@ def process_workbook(input_path: Path, output_path: Path, attachments_dir: Path,
                     ext = Path(attachment["filename"]).suffix or (
                         ".pdf" if "pdf" in attachment["mimeType"] else ".bin")
                     fname = f"{_safe_filename(match_name)}_{invoice_date.isoformat()}_{idx}{ext}"
-                    (attachments_dir / fname).write_bytes(raw)
                     status = STATUS_FOUND
-                    link_url = f"{base_url.rstrip('/')}/attachments/{run_id}/{fname}"
+                    # Prefer a Google Drive link when Drive upload is
+                    # configured (GOOGLE_SERVICE_ACCOUNT_JSON +
+                    # GOOGLE_DRIVE_FOLDER_ID); otherwise fall back to
+                    # serving the saved copy from this app.
+                    link_url = gdrive.upload_pdf(fname, raw, attachment["mimeType"])
+                    if not link_url:
+                        (attachments_dir / fname).write_bytes(raw)
+                        link_url = f"{base_url.rstrip('/')}/attachments/{run_id}/{fname}"
                 elif match_status == "review":
                     status = STATUS_REVIEW
                 else:

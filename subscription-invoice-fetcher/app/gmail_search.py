@@ -49,10 +49,14 @@ def _walk_message(msg, out_text, out_attachments):
     for part in msg.walk():
         if part.get_content_maintype() == "multipart":
             continue
-        content_disposition = str(part.get("Content-Disposition") or "")
         content_type = part.get_content_type()
         filename = part.get_filename()
-        if filename and "attachment" in content_disposition.lower():
+        # A part counts as an attachment whenever it carries a filename and a
+        # mime type we care about, regardless of Content-Disposition: many
+        # billing systems send PDFs with no Content-Disposition header at
+        # all, or with "inline" instead of "attachment", and the file is
+        # just as real and downloadable either way.
+        if filename and content_type.startswith(ATTACHMENT_MIME_PREFIXES):
             out_attachments.append({
                 "filename": _decode_header_value(filename),
                 "mimeType": content_type,

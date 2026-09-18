@@ -33,6 +33,32 @@ running it.
 pip install -r requirements.txt
 ```
 
+## Optional: save found invoices to Google Drive instead of this app
+
+By default, found attachments are saved locally and linked from
+`data/attachments/<run>/`. To have them uploaded to a Google Drive folder
+instead (so the sheet's "Invoice File" link is a Drive link), set up a
+service account once:
+
+1. In Google Cloud Console, create (or reuse) a project, enable the
+   **Google Drive API**, then create a **Service Account** and download its
+   JSON key file.
+2. In Google Drive, create (or pick) a folder for invoices and **share it**
+   with the service account's email address (found in the JSON key, field
+   `client_email`) as an **Editor**.
+3. Before running the app, set:
+   ```
+   export GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/service-account-key.json
+   export GOOGLE_DRIVE_FOLDER_ID=<the folder's id from its Drive URL>
+   ```
+   Optionally also set `GOOGLE_DRIVE_MAKE_PUBLIC=true` if you want each
+   uploaded file to be viewable by anyone with the link, rather than only
+   people the folder is already shared with (off by default, since invoices
+   can be sensitive).
+
+If these aren't set, the tool works exactly as before — no Drive project or
+setup is required.
+
 ## Run
 
 ```
